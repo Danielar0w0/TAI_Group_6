@@ -4,7 +4,18 @@
 #include <vector>
 #include <cstring>
 
+#include "utils/printUtils.h"
+
 using namespace std;
+
+// Smoothing parameter for estimating the probabilities
+int ALPHA = 0;
+
+// Window size
+int K = 11;
+
+// Threshold for the copy model
+double THRESHOLD = 0.5;
 
 // Develop a program, named cpm, that implements a copy model.
 // All required parameters to control the model must be passed as command line arguments.
@@ -12,19 +23,49 @@ using namespace std;
 // One major advantage here is the ability to adjust the probabilistic model as the encoding proceeds,
 // in response to the changing probability distribution from one encoded symbol to the next.
 
-void print_sequences(map<string, vector<int>> sequences, int k);
-void print_buffer(char* buffer, int k);
+void getInputArguments(int argc, char *argv[], int &alpha, int &k, FILE* &target);
+void copyModel(int k, int alpha, map<string, vector<int>> &sequences, vector<char> &alphabet, FILE *target);
 
-bool is_number(char* s);
+void readFirstSequence(FILE* &target, char* &buffer, vector<char> &alphabet, int k);
+bool readNextSequence(FILE* &target, char* &buffer, vector<char> &alphabet, int k);
+
+char* getSequenceAtPosition(map<string, vector<int>> &sequences, int position);
+void compareSequences(char* &buffer, char* &reference, int &Nh, int &Nf, int k);
+
+void updateReferencePointer(map<string, vector<int>> &sequences, int &reference_pointer, char* &buffer);
+double calculateHitProbability(int Nh, int Nf, int alpha);
+
+void addLetterToAlphabet(vector<char> &alphabet, char c);
+bool isNumber(char* s);
 
 int main(int argc, char *argv[]) {
 
-    int alpha = 0; // “Smoothing” parameter for estimating the probabilities (default value)
-    int k = 11; // Window size (default value)
-
+    int alpha = ALPHA; int k = K; // Default values
     FILE *target = nullptr; // Target sequence
 
+    // Read command line arguments
+    getInputArguments(argc, argv, alpha, k, target);
+
+    cout << "Alpha: " << alpha << endl;
+    cout << "k: " << k << endl << endl;
+
+    // English alphabet (26 letters)
+    vector<char> alphabet;
+
+    // Different sequences of symbols found in the target sequence
+    map<string, vector<int>> sequences;
+
+    // Apply the copy model
+    copyModel(k, alpha, sequences, alphabet, target);
+
+    // printPositions(sequences, k);
+    // printAlphabet(alphabet);
+}
+
+void getInputArguments(int argc, char *argv[], int &alpha, int &k, FILE* &target) {
+
     cout << "You have entered " << argc-1 << " arguments." << endl << endl;
+
     if (argc == 1) {
         cerr << "No arguments were entered." << endl;
         exit(EXIT_FAILURE);
@@ -36,15 +77,15 @@ int main(int argc, char *argv[]) {
 
             // Handle alpha
             if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--alpha") == 0) {
-                if (is_number(argv[i+1]))
+                if (isNumber(argv[i + 1]))
                     alpha = atoi(argv[i+1]);
 
             // Handle k
             } else if (strcmp(argv[i], "-k") == 0) {
-                if (is_number(argv[i + 1]))
+                if (isNumber(argv[i + 1]))
                     k = atoi(argv[i + 1]);
 
-            // Handle target sequence
+                // Handle target sequence
             } else if (strcmp(argv[i], "-f") == 0) {
 
                 // Open the target sequence file
@@ -63,18 +104,62 @@ int main(int argc, char *argv[]) {
         cerr << "No target sequence was provided." << endl;
         exit(EXIT_FAILURE);
     }
+}
 
-    int Nh; // Number of hits
-    int Nf; // Number of prediction fails
+void copyModel(int k, int alpha, map<string, vector<int>> &sequences, vector<char> &alphabet, FILE *target) {
 
-    int target_pointer = 0; // Pointer to the current position in the target sequence
-    int reference_pointer = 0; // Pointer to the current position in the reference sequence
+    int target_pointer = 1; // Pointer to the current position in the target sequence
+    int reference_pointer = 1; // Pointer to the current position in the reference sequence
 
-    char c; // Current character in the target sequence
     char* buffer = new char[k]; // Characters being read
 
-    // Set of all different sequences of symbols, found in the target sequence
-    map<string, vector<int>> sequences;
+    // Read the first k characters of the target sequence
+    readFirstSequence(target, buffer, alphabet, k);
+
+    // Add first buffer to the set of sequences
+    string sequence = buffer;
+    sequences[sequence].push_back(target_pointer++);
+
+    // printSequence(buffer, k);
+
+    int Tn = 0; // Number of times the copy model was used after the previous reposition
+    int Nh = 0; // Number of hits
+    int Nf = 0; // Number of prediction fails
+
+    // Read the target sequence character by character
+    while (readNextSequence(target, buffer, alphabet, k)) {
+
+        char* reference = getSequenceAtPosition(sequences, reference_pointer);
+
+        compareSequences(buffer, reference, Nh, Nf, k);
+
+        cout << "Nh: " << Nh << endl;
+        cout << "Nf: " << Nf << endl;
+
+        // cout << "Hit probability: " << calculateHitProbability(Nh, Nf, alpha) << endl;
+        if (calculateHitProbability(Nh, Nf, alpha) < THRESHOLD) {
+
+            updateReferencePointer(sequences, reference_pointer, buffer);
+
+            // Reset the counters
+            Nh = 0; Nf = 0;
+        }
+
+        printSequence(buffer, k);
+        cout << "Reference pointer: " << reference_pointer << endl;
+        cout << "-------------------" << endl;
+
+        // Add the buffer to the set of sequences
+        sequence = buffer;
+        sequences[sequence].push_back(target_pointer++);
+
+        // printSequence(buffer, k);
+    }
+}
+
+void readFirstSequence(FILE* &target, char* &buffer, vector<char> &alphabet, int k) {
+
+    char c; // Current character in the target sequence
 
     // Read the first k characters of the target sequence
     for (int i = 0; i < k; ++i) {
@@ -85,61 +170,87 @@ int main(int argc, char *argv[]) {
         }
 
         buffer[i] = c;
+
+        // Add the letter to the alphabet
+        addLetterToAlphabet(alphabet, c);
+    }
+}
+
+bool readNextSequence(FILE* &target, char* &buffer, vector<char> &alphabet, int k) {
+
+    char c = fgetc(target);
+    if (c == EOF) {
+        return false;
     }
 
-    // Add first buffer to the set of sequences
-    string current_buffer = buffer;
-    sequences[current_buffer].push_back(target_pointer++);
+    // Shift the buffer
+    for (int i = 0; i < k-1; ++i) {
+        buffer[i] = buffer[i+1];
+    }
 
-    // Read the target sequence character by character
-    while ((c = fgetc(target)) != EOF) {
+    // Add the character to the buffer
+    buffer[k-1] = c;
 
-        // TODO: Implement the copy model
+    // Add the letter to the alphabet
+    addLetterToAlphabet(alphabet, c);
 
-        // Shift the buffer
-        for (int i = 0; i < k-1; ++i) {
-            buffer[i] = buffer[i+1];
+    return true;
+}
+
+void addLetterToAlphabet(vector<char> &alphabet, char c) {
+
+    // Check if the letter is already in the alphabet
+    bool found = false;
+    for (char i : alphabet) {
+        if (i == c) {
+            found = true;
+            break;
+        }
+    }
+
+    // Add the letter to the alphabet
+    if (!found) {
+        alphabet.push_back(c);
+    }
+}
+
+char* getSequenceAtPosition(map<string, vector<int>> &sequences, int position) {
+
+    for (auto &sequence : sequences) {
+        for (int i : sequence.second) {
+            if (i == position) {
+                return (char*) sequence.first.c_str();
+            }
+        }
+    }
+    return nullptr;
+}
+
+void compareSequences(char* &buffer, char* &reference, int &Nh, int &Nf, int k) {
+
+    // Compare the two sequences
+    for (int i = 0; i < k; ++i) {
+        if (buffer[i] == reference[i]) Nh++; else Nf++;
+    }
+}
+
+double calculateHitProbability(int Nh, int Nf, int alpha) {
+    return (double) (Nh + alpha) / (Nh + Nf + 2*alpha);
+}
+
+void updateReferencePointer(map<string, vector<int>> &sequences, int &reference_pointer, char* &buffer) {
+
+        // Check if the buffer is in the set of sequences
+        string sequence = buffer;
+        if (sequences.find(sequence) != sequences.end()) {
+            // Update the reference pointer (last occurrence)
+            reference_pointer = sequences[sequence].back();
         }
 
-        // Add the character to the buffer
-        buffer[k-1] = c;
-
-        // Add the buffer to the set of sequences
-        current_buffer = buffer;
-        sequences[current_buffer].push_back(target_pointer++);
-
-        // print_buffer(buffer, k);
-    }
-
-    print_sequences(sequences, k);
+        cout << "Repositioned." << endl;
 }
 
-void print_sequences(map<string, vector<int>> sequences, int k) {
-
-    // Print the number of sequences
-    cout << "Number of sequences: " << sequences.size() << endl;
-
-    for (auto& t : sequences) {
-
-        char* sequence = new char[k];
-        strcpy(sequence, t.first.c_str());
-
-        print_buffer(sequence, k);
-        cout << "Positions: ";
-        for (auto& i : t.second)
-            cout << i << " ";
-        cout << endl;
-    }
-}
-
-void print_buffer(char* buffer, int k) {
-    for (int i = 0; i < k; ++i) {
-        cout << buffer[i];
-    }
-    cout << endl;
-}
-
-bool is_number(char* s) {
+bool isNumber(char* s) {
 
     for (int i = 0; i < strlen(s); ++i) {
         if (!isdigit(s[i])) {
