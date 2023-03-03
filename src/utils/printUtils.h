@@ -33,11 +33,19 @@ void printPositions(map<string, vector<int>> positions, int k) {
     cout << endl;
 }
 
-void printAlphabet(vector<char> alphabet) {
+void printAlphabet(set<char> alphabet) {
     cout << "Alphabet: ";
     for (char c : alphabet)
         cout << c << " ";
     cout << endl;
+}
+
+void printHelp() {
+    cout << "cmp: cmp [-akf]" << endl;
+    cout << "Options:" << endl;
+    cout << "-a \t Alpha" << endl;
+    cout << "-k \t Window size" << endl;
+    cout << "-f \t File with target sequence" << endl;
 }
 
 #endif //SRC_PRINTUTILS_H
