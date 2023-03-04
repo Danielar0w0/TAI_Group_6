@@ -3,4 +3,4 @@ project(src)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(src cmp.cpp utils/printUtils.h input/Input.cpp input/Input.h)
+add_executable(src cmp.cpp utils/printUtils.h input/Input.cpp input/Input.h utils/readTarget.h)

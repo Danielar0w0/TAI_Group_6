@@ -33,6 +33,20 @@ void printPositions(map<string, vector<int>> positions, int k) {
     cout << endl;
 }
 
+void printReferencePointers(map<string, int> &referencePointers, int k) {
+
+    cout << "Number of sequences with pointers: " << referencePointers.size() << endl;
+    for (auto& t : referencePointers) {
+
+        char* sequence = new char[k];
+        strcpy(sequence, t.first.c_str());
+
+        printSequence(sequence, k);
+        cout << "Reference pointer: " << t.second << endl;
+    }
+    cout << endl;
+}
+
 void printAlphabet(set<char> alphabet) {
     cout << "Alphabet: ";
     for (char c : alphabet)

@@ -18,7 +18,7 @@ class Input {
 
     public:
 
-        explicit Input(string filePath, int alpha = 2, int k = 11) {
+        explicit Input(string filePath, int alpha, int k) {
             this->alpha = alpha;
             this->k = k;
             this->filePath = filePath;

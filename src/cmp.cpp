@@ -4,6 +4,7 @@
 #include <set>
 
 #include "utils/printUtils.h"
+#include "utils/readTarget.h"
 #include "input/Input.h"
 
 using namespace std;
@@ -18,12 +19,13 @@ using namespace std;
 double THRESHOLD = 0.5;
 
 Input getInputArguments(int argc, char *argv[]);
-
-FILE *obtainTarget(string filePath);
-
 set<char> obtainAlphabet(string filePath);
 
+int updateReferencePointer(map<string, vector<int>> &sequences, string &sequence);
+double calculateHitProbability(int Nh, int Nf, int alpha);
+
 bool isNumber(char *s);
+
 
 int main(int argc, char *argv[]) {
 
@@ -40,18 +42,106 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    // Get alphabet
+    // First Pass: Get alphabet
     set<char> alphabet = obtainAlphabet(filePath);
-    printAlphabet(alphabet);
+    printAlphabet(alphabet); cout << endl;
 
+    // Second Pass
+    map<string, vector<int>> positions;
+    string reference; string sequence;
 
+    FILE* target = obtainTarget(filePath);
+    char* buffer = readFirstSequence(target, k);
+    // printSequence(buffer, k);
 
+    // Start reference sequence
+    for (int i = 0; i < k; ++i) {
+        reference += buffer[i];
+    }
 
-    // Apply the copy model
-    // copyModel(k, alpha, sequences, alphabet, target);
+    int targetPointer = 1; // Pointer to the current position in the target sequence
+    map<string, int> referencePointers; // Pointers to past positions in the reference sequence
 
-    // printPositions(sequences, k);
-    // printAlphabet(alphabet);
+    while (readNextSequence(target, buffer, k)) {
+
+        // printSequence(buffer, k);
+        // Add new character to reference sequence
+        reference += buffer[k-1];
+
+        // Update current sequence
+        sequence = buffer[0];
+        for (int i = 1; i < k; ++i) {
+            sequence += buffer[i];
+        }
+
+        // If no reference pointer yet, try to update it
+        if (referencePointers.find(sequence) == referencePointers.end()) {
+            // Update reference pointer
+            int newPointer = updateReferencePointer(positions, sequence);
+            if (newPointer != -1) {
+                referencePointers[sequence] = newPointer;
+                cout << "Current position: [" << targetPointer << "]" << endl;
+                cout << "Repositioned reference: [" << newPointer << "]" << endl;
+            }
+        }
+
+        // If reference pointer exists, predict
+        if (referencePointers.find(sequence) != referencePointers.end()) {
+
+            /*
+            int Tn = 0; // Number of times the copy model was used after the previous reposition
+            int Nh = 0; // Number of hits
+            int Nf = 0; // Number of prediction fails
+             */
+
+            // TODO: Keep track of Nh and Nf for all sequences
+            map<char, int> Nh; // Number of hits
+            map<char, int> Nf; // Number of prediction fails
+
+            // Read next character (prediction)
+            char prediction = reference[referencePointers[sequence] + k];
+
+            // Check number of hits/fails for each character in the alphabet
+            for (char c : alphabet) {
+                // Check if the prediction is correct
+                if (prediction == c) {
+                    Nh[c]++;
+                } else {
+                    Nf[c]++;
+                }
+            }
+
+            cout << "Sequence: " << sequence << endl;
+            cout << "Prediction: " << prediction << endl;
+
+            cout << "Hit probability for prediction " << prediction << ": " <<
+                 calculateHitProbability(Nh[prediction], Nf[prediction], alpha) << endl;
+            cout << endl;
+
+            // If prediction doesn't meet the threshold, reposition
+            if (calculateHitProbability(Nh[prediction], Nf[prediction], alpha) < THRESHOLD) {
+
+                // Update reference pointer
+                int newPointer = updateReferencePointer(positions, sequence);
+                if (newPointer != -1) {
+                    referencePointers[sequence] = newPointer;
+                    cout << "Repositioned: [" << newPointer << "]" << endl;
+                }
+
+                // Reset the counters
+                Nh.clear();
+                Nf.clear();
+            }
+        }
+
+        // Add sequence position and update target pointer
+        positions[sequence].push_back(targetPointer++);
+
+        // cout << "Reference: " << reference << endl;
+    }
+
+    // printPositions(positions, k);
+    // printReferencePointers(referencePointers, k);
 }
 
 Input getInputArguments(int argc, char *argv[]) {
@@ -87,34 +177,51 @@ Input getInputArguments(int argc, char *argv[]) {
             }
         }
 
+        if (alpha == 0) {
+            cout << "Alpha was not provided. Using default value: 2" << endl;
+            alpha = 1;
+        }
+
+        if (k == 0) {
+            cout << "Window size was not provided. Using default value: 3" << endl;
+            k = 3;
+        }
+
         return Input(filePath, alpha, k);
     }
-}
-
-FILE* obtainTarget(string filePath) {
-
-    // Open the target sequence file
-    FILE *target = fopen(filePath.c_str(), "r");
-
-    if (target == NULL) {
-        cerr << "Error reading text file" << target << ": " << strerror(errno) << endl;
-        exit(EXIT_FAILURE);
-    }
-
-    return target;
 }
 
 set<char> obtainAlphabet(string filePath) {
 
     FILE* target = obtainTarget(filePath);
+    set<char> alphabet; int length = 0;
 
-    set<char> alphabet; char c;
+    char c;
     while((c = fgetc(target)) != EOF) {
         alphabet.insert(c);
+        length++;
     }
 
     fclose(target);
+
     return alphabet;
+}
+
+int updateReferencePointer(map<string, vector<int>> &sequences, string &sequence) {
+
+    int referencePointer = -1;
+
+    // Check if the buffer is in the set of sequences
+    if (sequences.find(sequence) != sequences.end()) {
+        // Update the reference pointer (last occurrence)
+        referencePointer = sequences[sequence].back();
+    }
+
+    return referencePointer;
+}
+
+double calculateHitProbability(int Nh, int Nf, int alpha) {
+    return (double) (Nh + alpha) / (Nh + Nf + 2*alpha);
 }
 
 bool isNumber(char *s) {
