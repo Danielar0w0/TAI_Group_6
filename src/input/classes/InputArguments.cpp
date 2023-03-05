@@ -2,13 +2,13 @@
 
 #include <iostream>
 
-InputArguments::InputArguments(string filePath, int alpha, int k) {
+InputArguments::InputArguments(string filePath, double alpha, int k) {
     this->alpha = alpha;
     this->k = k;
     this->filePath = std::move(filePath);
 }
 
-int InputArguments::getAlpha() const {
+double InputArguments::getAlpha() const {
     return this->alpha;
 }
 

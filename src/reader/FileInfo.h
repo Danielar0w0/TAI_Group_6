@@ -5,14 +5,14 @@
 
 class FileInfo {
 
-    std::set<int> alphabet;
+    std::set<char> alphabet;
     int size;
 
     public:
 
-        explicit FileInfo(std::set<int> alphabet, int size);
+        explicit FileInfo(std::set<char> alphabet, int size);
 
-        std::set<int> getAlphabet();
+        std::set<char> getAlphabet();
         [[nodiscard]] int getSize() const;
 
 };

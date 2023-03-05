@@ -2,12 +2,12 @@
 
 #include <utility>
 
-FileInfo::FileInfo(std::set<int> alphabet, int size) {
+FileInfo::FileInfo(std::set<char> alphabet, int size) {
     this->alphabet = std::move(alphabet);
     this->size = size;
 }
 
-std::set<int> FileInfo::getAlphabet() {
+std::set<char> FileInfo::getAlphabet() {
     return this->alphabet;
 }
 

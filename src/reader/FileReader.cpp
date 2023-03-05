@@ -100,15 +100,15 @@ bool FileReader::shiftWindow() {
 
 FileInfo FileReader::getFileInfo() {
 
-    int currentCharacter;
+    char currentCharacter;
 
-    std::set<int> alphabet;
+    std::set<char> alphabet;
     int fileSize = 0;
 
     if (this->targetFile == nullptr)
         throw std::runtime_error("Target file is a null pointer!");
 
-    while ((currentCharacter = fgetc(this->targetFile)) != EOF) {
+    while ((currentCharacter = (char) fgetc(this->targetFile)) != EOF) {
         alphabet.insert(currentCharacter);
         ++fileSize;
     }

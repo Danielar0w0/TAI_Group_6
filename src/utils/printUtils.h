@@ -3,6 +3,7 @@
 #include <map>
 #include <vector>
 #include <cstring>
+#include <set>
 
 using namespace std;
 
@@ -48,10 +49,10 @@ void printReferencePointers(map<string, int> &referencePointers, int k) {
 }
 
 
-void printAlphabet(const set<int>& alphabet) {
+void printAlphabet(const set<char>& alphabet) {
     cout << "Alphabet: ";
-    for (int c : alphabet)
-        printf("%c ", c);
+    for (char c : alphabet)
+        printf("%i ", c);
     cout << endl;
 }
 

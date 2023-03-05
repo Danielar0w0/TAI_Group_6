@@ -12,15 +12,15 @@ using namespace std;
 
 class InputArguments {
 
-    int alpha;
+    double alpha;
     int k;
     string filePath;
 
     public:
 
-        InputArguments(string filePath, int alpha, int k);
+        InputArguments(string filePath, double alpha, int k);
 
-        [[nodiscard]] int getAlpha() const;
+        [[nodiscard]] double getAlpha() const;
         [[nodiscard]] int getK() const;
         [[nodiscard]] string getFilePath() const;
 
