@@ -11,11 +11,11 @@ using namespace std;
 
 void printSequence(char* sequence, int k) {
     cout << "Sequence: ";
-    for (int i = 0; i < k; ++i) {
-        cout << sequence[i];
-    }
+    for (int i = 0; i < k; ++i)
+        printf("%c", sequence[i]);
     cout << endl;
 }
+
 
 void printPositions(map<string, vector<int>> positions, int k) {
     cout << "Number of sequences: " << positions.size() << endl;
@@ -47,10 +47,11 @@ void printReferencePointers(map<string, int> &referencePointers, int k) {
     cout << endl;
 }
 
-void printAlphabet(set<char> alphabet) {
+
+void printAlphabet(const set<int>& alphabet) {
     cout << "Alphabet: ";
-    for (char c : alphabet)
-        cout << c << " ";
+    for (int c : alphabet)
+        printf("%c ", c);
     cout << endl;
 }
 
