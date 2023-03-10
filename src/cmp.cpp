@@ -6,6 +6,7 @@
 #include "input/classes/InputArguments.h"
 #include "input/InputUtils.h"
 #include "reader/FileReader.h"
+#include "hitsMisses/HitsMissesInfo.h"
 
 using namespace std;
 
@@ -22,6 +23,15 @@ void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha)
 FileInfo getFileInfo(const InputArguments& inputArguments);
 FileReader getFileReaderInstance(const InputArguments& inputArguments);
 
+string convertToString(char* a, int size)
+{
+    int i;
+    string s = "";
+    for (i = 0; i < size; i++) {
+        s = s + a[i];
+    }
+    return s;
+}
 
 int main(int argc, char *argv[]) {
 
@@ -32,7 +42,6 @@ int main(int argc, char *argv[]) {
 
     if (!areArgumentsValid)
         std::exit(EXIT_FAILURE);
-
 
     // First Pass: Get File Info. (Alphabet and size)
     FileInfo fileInfo = getFileInfo(inputArguments);
@@ -47,7 +56,6 @@ int main(int argc, char *argv[]) {
 
     analyseFileSequence(fileReader, fileInfo, inputArguments.getAlpha());
 
-
 }
 
 void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha) {
@@ -57,7 +65,13 @@ void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha)
     std::map<string, int> sequenceCurrentPointerIndex;
 
     // Todo: We may only need to store the hits and misses for the character we are currently predicting
-    std::map<string, std::map<char, int*>> hitsAndMissesForEachSequence;
+    std::map<string, std::pair<char, HitsMissesInfo>> hitsAndMissesForEachSequence;
+
+    std::map<string, std::map<char, double>> sequenceSymbolProbabilities;
+
+    // Temporary variables to calculate the average of probabilities for each sequence + symbol
+    std::map<string, std::map<char, double>> sequenceSymbolProbabilitiesSum;
+    std::map<string, int> sequenceSymbolProbabilitiesCount;
 
     std::map<char, double> probabilitiesByCharacter;
 
@@ -69,7 +83,7 @@ void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha)
 
         // printSequence(fileReader.getWindowContent(), fileReader.getWindowSize());
 
-        string sequenceAsString(fileReader.getWindowContent());
+        string sequenceAsString = convertToString(fileReader.getWindowContent(), fileReader.getWindowSize());
 
         // Let's try to predict
 
@@ -85,54 +99,34 @@ void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha)
             // Now we have selected a pointer for this sequence for sure.
             int currentPointerForCurrentSequence = sequenceCurrentPointer[sequenceAsString];
 
-            // Which caracter are we predicting that will come next?
+            // Which character are we predicting that will come next?
             char predictedCharacter = fileReader.getCache()[currentPointerForCurrentSequence+1];
 
-            // Which caracter was indeed next?
+            // Which character was indeed next?
             char futureCharacter = fileReader.getFutureCharacter();
 
-            // Have we already calculated any probability for this sequence?
-            // For this sequence, have we calculated any probability for a certain character?
-            if (hitsAndMissesForEachSequence.count(sequenceAsString) <= 0
-                || hitsAndMissesForEachSequence[sequenceAsString].count(predictedCharacter) <= 0) { // No. We need to initialize it
+            HitsMissesInfo hitsMissesInfo = HitsMissesInfo();
 
-                // The first element is a Hit, second a Miss
-                // Todo: Change this to a struct or class
-                int hitsAndMissesArray[2];
+            if (hitsAndMissesForEachSequence.count(sequenceAsString) > 0 &&
+                hitsAndMissesForEachSequence[sequenceAsString].first == predictedCharacter) {
 
-                if (predictedCharacter == futureCharacter) { // Then we have a hit! :)
-                    // Set 1 Hit and 0 Misses
-                    hitsAndMissesArray[0] = 1;
-                    hitsAndMissesArray[1] = 0;
-                } else {
-                    // Set 0 Hits and 1 Miss
-                    hitsAndMissesArray[0] = 0;
-                    hitsAndMissesArray[1] = 1;
-                }
-
-                // We initialized the hits and misses
-                // hitsAndMissesForEachSequence[sequenceAsString][predictedCharacter] = hitsAndMissesArray;
-                hitsAndMissesForEachSequence[sequenceAsString].insert(std::make_pair(predictedCharacter, hitsAndMissesArray));
-
-            } else { // Yes, the hits and misses are already initialized. Just change it
-
-                // Get the hits and misses, add one hit, and re-assign it
-                int* hitsAndMissesArray = hitsAndMissesForEachSequence[sequenceAsString][predictedCharacter];
-
-                if (predictedCharacter == futureCharacter) { // Then we have a hit! :)
-                    ++hitsAndMissesArray[0]; // Add one Hit
-                } else {
-                    ++hitsAndMissesArray[1]; // Add one miss
-                }
-
-                hitsAndMissesForEachSequence[sequenceAsString][predictedCharacter] = hitsAndMissesArray; // Re-assign it
+                hitsMissesInfo = hitsAndMissesForEachSequence[sequenceAsString].second;
 
             }
 
+            if (predictedCharacter == futureCharacter) { // Then we have a hit! :)
+                hitsMissesInfo.incrementHits(); // Add one Hit
+            } else {
+                hitsMissesInfo.incrementMisses(); // Add one miss
+            }
+
+            // hitsAndMissesForEachSequence[sequenceAsString].second = hitsMissesInfo; // Re-assign it
+            hitsAndMissesForEachSequence[sequenceAsString] = std::make_pair(predictedCharacter, hitsMissesInfo);
+
             // Now, we will calculate the probability for our predicted character
 
-            int hitsForPredictedCharacter = hitsAndMissesForEachSequence[sequenceAsString][predictedCharacter][0];
-            int missesForPredictedCharacter = hitsAndMissesForEachSequence[sequenceAsString][predictedCharacter][1];
+            unsigned int hitsForPredictedCharacter = hitsAndMissesForEachSequence[sequenceAsString].second.getHits();
+            unsigned int missesForPredictedCharacter = hitsAndMissesForEachSequence[sequenceAsString].second.getMisses();
             double probabilityForPredictedCharacter = calculateHitProbability(hitsForPredictedCharacter, missesForPredictedCharacter, alpha);
 
             // If our probability is below our threshold we need to change the pointer for our sequence because the current pointer is bad!
@@ -143,13 +137,15 @@ void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha)
                 sequenceCurrentPointer[sequenceAsString] = pastSequencesPositions[sequenceAsString].rbegin()[nextPointerIndex];
 
                 // Clean hits and misses for this sequence and this prediction
-                int hitsAndMissesArray[2] = {0,0};
-                hitsAndMissesForEachSequence[sequenceAsString][predictedCharacter] = hitsAndMissesArray;
+                hitsAndMissesForEachSequence[sequenceAsString] = std::make_pair(predictedCharacter, HitsMissesInfo());
 
             }
 
             // Regardless, we need to update the amount of information for each character in our alphabet.
             probabilitiesByCharacter[predictedCharacter] += probabilityForPredictedCharacter;
+
+            // Keep track of symbol probabilities for current sequence
+            sequenceSymbolProbabilitiesSum[sequenceAsString][predictedCharacter] += probabilityForPredictedCharacter;
 
             ++predictionsCount;
 
@@ -158,11 +154,17 @@ void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha)
 
             // And assign the calculated probability to each one of the characters
             for (char characterInAlphabet : fileInfo.getAlphabet()) {
-                if (characterInAlphabet != predictedCharacter)
+
+                if (characterInAlphabet != predictedCharacter) {
                     probabilitiesByCharacter[characterInAlphabet] += probabilityDistribution;
+
+                    // Keep track of symbol probabilities for current sequence
+                    sequenceSymbolProbabilitiesSum[sequenceAsString][characterInAlphabet] += probabilityDistribution;
+                }
             }
 
-            // Todo: For a given sequence, store the probabilities for all the characters and in the end maybe do the average of the probabilities?
+            // Update count to later calculate average of probabilities
+            sequenceSymbolProbabilitiesCount[sequenceAsString]++;
 
         }
 
@@ -179,10 +181,49 @@ void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha)
 
     }
 
+
+    //  Some probabilities for the generator
+    int cnt = 0;
+    for (auto i: sequenceSymbolProbabilitiesSum) {
+
+        string sequence = i.first;
+        printf("%s\n", sequence.c_str());
+
+        for (auto j: i.second) {
+
+            char c = j.first; double prob = j.second;
+
+            int count = sequenceSymbolProbabilitiesCount[sequence];
+
+            // Update final average of probabilities for sequence + symbol
+            sequenceSymbolProbabilities[sequence][c] = prob/count;
+
+            cout << c << " : " << prob/count << endl;
+        }
+        cout << endl;
+
+        cnt++;
+        if(cnt >= 3) break;
+    }
+
+    map<char, int> symbolsCount = fileInfo.getSymbolsCount();
+    for (auto i: symbolsCount) {
+        cout << i.first << " : " << i.second << endl;
+    }
+    cout << endl;
+
     for (auto i : probabilitiesByCharacter) {
         // cout << i.first << " : " << i.second/predictionsCount << endl;
         cout << i.first << " : " << -log2(i.second / predictionsCount) << endl;
     }
+
+    double totalInformation = 0; char c; int count;
+    for (auto i: symbolsCount) {
+        c = i.first; count = i.second;
+        totalInformation = count * -log2(probabilitiesByCharacter[c] / predictionsCount);
+    }
+    cout << endl;
+    cout << "Total Information: " << totalInformation << endl;
 
     fileReader.closeFile();
 
@@ -197,7 +238,6 @@ FileInfo getFileInfo(const InputArguments& inputArguments) {
     fileReader.closeFile();
 
     return fileInfo;
-
 }
 
 FileReader getFileReaderInstance(const InputArguments& inputArguments) {

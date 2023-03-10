@@ -14,7 +14,7 @@ bool isNumber(char *s) {
     return std::regex_match(arrayAsString, std::regex("[0-9]*[\\.]?[0-9]+"));
 }
 
-double calculateHitProbability(int Nh, int Nf, double alpha) {
+double calculateHitProbability(unsigned int Nh, unsigned int Nf, double alpha) {
     return (double) (Nh + alpha) / (Nh + Nf + 2*alpha);
 }
 

@@ -103,6 +103,8 @@ FileInfo FileReader::getFileInfo() {
     char currentCharacter;
 
     std::set<char> alphabet;
+    std::map<char, int> symbolsCount;
+
     int fileSize = 0;
 
     if (this->targetFile == nullptr)
@@ -110,11 +112,11 @@ FileInfo FileReader::getFileInfo() {
 
     while ((currentCharacter = (char) fgetc(this->targetFile)) != EOF) {
         alphabet.insert(currentCharacter);
+        ++symbolsCount[currentCharacter];
         ++fileSize;
     }
 
-    return FileInfo(alphabet, fileSize);
-
+    return FileInfo(alphabet, symbolsCount, fileSize);
 }
 
 int FileReader::getWindowSize() const {
