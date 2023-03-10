@@ -1,11 +1,11 @@
 #include <iostream>
 #include <string>
-#include <cstring>
-#include <set>
+#include <cmath>
 
 #include "utils/printUtils.h"
-#include "utils/readTarget.h"
-#include "input/Input.h"
+#include "input/classes/InputArguments.h"
+#include "input/InputUtils.h"
+#include "reader/FileReader.h"
 
 using namespace std;
 
@@ -18,219 +18,192 @@ using namespace std;
 // Threshold for the copy model
 double THRESHOLD = 0.5;
 
-Input getInputArguments(int argc, char *argv[]);
-set<char> obtainAlphabet(string filePath);
-
-int updateReferencePointer(map<string, vector<int>> &sequences, string &sequence);
-double calculateHitProbability(int Nh, int Nf, int alpha);
-
-bool isNumber(char *s);
+void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha);
+FileInfo getFileInfo(const InputArguments& inputArguments);
+FileReader getFileReaderInstance(const InputArguments& inputArguments);
 
 
 int main(int argc, char *argv[]) {
 
     // Read command line arguments
-    Input input = getInputArguments(argc, argv);
+    InputArguments inputArguments = getInputArguments(argc, argv);
 
-    int alpha = input.getAlpha();       // Alpha (!= 0)
-    int k = input.getK();               // Window size
+    bool areArgumentsValid = inputArguments.checkArguments();
 
-    // Check if file was provided
-    string filePath = input.getPath();
-    if (filePath.empty()) {
-        cerr << "No target sequence was provided." << endl;
-        exit(EXIT_FAILURE);
-    }
+    if (!areArgumentsValid)
+        std::exit(EXIT_FAILURE);
 
-    // First Pass: Get alphabet
-    set<char> alphabet = obtainAlphabet(filePath);
-    printAlphabet(alphabet); cout << endl;
 
-    // Second Pass
-    map<string, vector<int>> positions;
-    string reference; string sequence;
+    // First Pass: Get File Info. (Alphabet and size)
+    FileInfo fileInfo = getFileInfo(inputArguments);
 
-    FILE* target = obtainTarget(filePath);
-    char* buffer = readFirstSequence(target, k);
-    // printSequence(buffer, k);
+    // TODO: Remove this print
+    printAlphabet(fileInfo.getAlphabet());
 
-    // Start reference sequence
-    for (int i = 0; i < k; ++i) {
-        reference += buffer[i];
-    }
+    cout << endl;
 
-    int targetPointer = 1; // Pointer to the current position in the target sequence
-    map<string, int> referencePointers; // Pointers to past positions in the reference sequence
+    // Get File Reader instance for second pass
+    FileReader fileReader = getFileReaderInstance(inputArguments);
 
-    while (readNextSequence(target, buffer, k)) {
+    analyseFileSequence(fileReader, fileInfo, inputArguments.getAlpha());
 
-        // printSequence(buffer, k);
-        // Add new character to reference sequence
-        reference += buffer[k-1];
 
-        // Update current sequence
-        sequence = buffer[0];
-        for (int i = 1; i < k; ++i) {
-            sequence += buffer[i];
-        }
+}
 
-        // If no reference pointer yet, try to update it
-        if (referencePointers.find(sequence) == referencePointers.end()) {
-            // Update reference pointer
-            int newPointer = updateReferencePointer(positions, sequence);
-            if (newPointer != -1) {
-                referencePointers[sequence] = newPointer;
-                cout << "Current position: [" << targetPointer << "]" << endl;
-                cout << "Repositioned reference: [" << newPointer << "]" << endl;
+void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha) {
+
+    std::map<string, vector<int>> pastSequencesPositions;
+    std::map<string, int> sequenceCurrentPointer;
+    std::map<string, int> sequenceCurrentPointerIndex;
+
+    // Todo: We may only need to store the hits and misses for the character we are currently predicting
+    std::map<string, std::map<char, int*>> hitsAndMissesForEachSequence;
+
+    std::map<char, double> probabilitiesByCharacter;
+
+    fileReader.openFile();
+
+    int predictionsCount = 0;
+
+    while (fileReader.next()) {
+
+        // printSequence(fileReader.getWindowContent(), fileReader.getWindowSize());
+
+        string sequenceAsString(fileReader.getWindowContent());
+
+        // Let's try to predict
+
+        if (pastSequencesPositions.count(sequenceAsString) > 0) { // We can predict because we have already seen it
+
+            // Have we already selected a pointer for this sequence??
+
+            if (sequenceCurrentPointer.count(sequenceAsString) <= 0) { // We have not selected a pointer for the current sequence. Select one (the first one)!!
+                sequenceCurrentPointer[sequenceAsString] = pastSequencesPositions[sequenceAsString].rbegin()[0];
+                sequenceCurrentPointerIndex[sequenceAsString] = 0;
             }
-        }
 
-        // If reference pointer exists, predict
-        if (referencePointers.find(sequence) != referencePointers.end()) {
+            // Now we have selected a pointer for this sequence for sure.
+            int currentPointerForCurrentSequence = sequenceCurrentPointer[sequenceAsString];
 
-            /*
-            int Tn = 0; // Number of times the copy model was used after the previous reposition
-            int Nh = 0; // Number of hits
-            int Nf = 0; // Number of prediction fails
-             */
+            // Which caracter are we predicting that will come next?
+            char predictedCharacter = fileReader.getCache()[currentPointerForCurrentSequence+1];
 
-            // TODO: Keep track of Nh and Nf for all sequences
-            map<char, int> Nh; // Number of hits
-            map<char, int> Nf; // Number of prediction fails
+            // Which caracter was indeed next?
+            char futureCharacter = fileReader.getFutureCharacter();
 
-            // Read next character (prediction)
-            char prediction = reference[referencePointers[sequence] + k];
+            // Have we already calculated any probability for this sequence?
+            // For this sequence, have we calculated any probability for a certain character?
+            if (hitsAndMissesForEachSequence.count(sequenceAsString) <= 0
+                || hitsAndMissesForEachSequence[sequenceAsString].count(predictedCharacter) <= 0) { // No. We need to initialize it
 
-            // Check number of hits/fails for each character in the alphabet
-            for (char c : alphabet) {
-                // Check if the prediction is correct
-                if (prediction == c) {
-                    Nh[c]++;
+                // The first element is a Hit, second a Miss
+                // Todo: Change this to a struct or class
+                int hitsAndMissesArray[2];
+
+                if (predictedCharacter == futureCharacter) { // Then we have a hit! :)
+                    // Set 1 Hit and 0 Misses
+                    hitsAndMissesArray[0] = 1;
+                    hitsAndMissesArray[1] = 0;
                 } else {
-                    Nf[c]++;
-                }
-            }
-
-            cout << "Sequence: " << sequence << endl;
-            cout << "Prediction: " << prediction << endl;
-
-            cout << "Hit probability for prediction " << prediction << ": " <<
-                 calculateHitProbability(Nh[prediction], Nf[prediction], alpha) << endl;
-            cout << endl;
-
-            // If prediction doesn't meet the threshold, reposition
-            if (calculateHitProbability(Nh[prediction], Nf[prediction], alpha) < THRESHOLD) {
-
-                // Update reference pointer
-                int newPointer = updateReferencePointer(positions, sequence);
-                if (newPointer != -1) {
-                    referencePointers[sequence] = newPointer;
-                    cout << "Repositioned: [" << newPointer << "]" << endl;
+                    // Set 0 Hits and 1 Miss
+                    hitsAndMissesArray[0] = 0;
+                    hitsAndMissesArray[1] = 1;
                 }
 
-                // Reset the counters
-                Nh.clear();
-                Nf.clear();
+                // We initialized the hits and misses
+                // hitsAndMissesForEachSequence[sequenceAsString][predictedCharacter] = hitsAndMissesArray;
+                hitsAndMissesForEachSequence[sequenceAsString].insert(std::make_pair(predictedCharacter, hitsAndMissesArray));
+
+            } else { // Yes, the hits and misses are already initialized. Just change it
+
+                // Get the hits and misses, add one hit, and re-assign it
+                int* hitsAndMissesArray = hitsAndMissesForEachSequence[sequenceAsString][predictedCharacter];
+
+                if (predictedCharacter == futureCharacter) { // Then we have a hit! :)
+                    ++hitsAndMissesArray[0]; // Add one Hit
+                } else {
+                    ++hitsAndMissesArray[1]; // Add one miss
+                }
+
+                hitsAndMissesForEachSequence[sequenceAsString][predictedCharacter] = hitsAndMissesArray; // Re-assign it
+
             }
-        }
 
-        // Add sequence position and update target pointer
-        positions[sequence].push_back(targetPointer++);
+            // Now, we will calculate the probability for our predicted character
 
-        // cout << "Reference: " << reference << endl;
-    }
+            int hitsForPredictedCharacter = hitsAndMissesForEachSequence[sequenceAsString][predictedCharacter][0];
+            int missesForPredictedCharacter = hitsAndMissesForEachSequence[sequenceAsString][predictedCharacter][1];
+            double probabilityForPredictedCharacter = calculateHitProbability(hitsForPredictedCharacter, missesForPredictedCharacter, alpha);
 
-    // printPositions(positions, k);
-    // printReferencePointers(referencePointers, k);
-}
+            // If our probability is below our threshold we need to change the pointer for our sequence because the current pointer is bad!
+            if (probabilityForPredictedCharacter < THRESHOLD) {
 
-Input getInputArguments(int argc, char *argv[]) {
+                // Change the pointer to another one
+                int nextPointerIndex = ++sequenceCurrentPointerIndex[sequenceAsString];
+                sequenceCurrentPointer[sequenceAsString] = pastSequencesPositions[sequenceAsString].rbegin()[nextPointerIndex];
 
-    cout << "You have entered " << argc - 1 << " arguments." << endl << endl;
+                // Clean hits and misses for this sequence and this prediction
+                int hitsAndMissesArray[2] = {0,0};
+                hitsAndMissesForEachSequence[sequenceAsString][predictedCharacter] = hitsAndMissesArray;
 
-    if (argc == 1) {
-        cerr << "No arguments were entered." << endl;
-        printHelp();
-
-        exit(EXIT_FAILURE);
-
-    } else {
-
-        int alpha, k; string filePath;
-
-        // Note: argc - 1 because the last argument can't be a flag
-        for (int i = 0; i < argc - 1; ++i) {
-
-            // Handle alpha
-            if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--alpha") == 0) {
-                if (isNumber(argv[i + 1]))
-                    alpha = atoi(argv[i + 1]);
-
-            // Handle k
-            } else if (strcmp(argv[i], "-k") == 0) {
-                if (isNumber(argv[i + 1]))
-                    k = atoi(argv[i + 1]);
-
-            // Handle file path (target sequence)
-            } else if (strcmp(argv[i], "-f") == 0) {
-                filePath = argv[i + 1];
             }
+
+            // Regardless, we need to update the amount of information for each character in our alphabet.
+            probabilitiesByCharacter[predictedCharacter] += probabilityForPredictedCharacter;
+
+            ++predictionsCount;
+
+            // Here we do a uniform distribution of probabilities across the different characters of the alphabet
+            double probabilityDistribution = (1-probabilityForPredictedCharacter)/(int)(fileInfo.getAlphabet().size()-1);
+
+            // And assign the calculated probability to each one of the characters
+            for (char characterInAlphabet : fileInfo.getAlphabet()) {
+                if (characterInAlphabet != predictedCharacter)
+                    probabilitiesByCharacter[characterInAlphabet] += probabilityDistribution;
+            }
+
+            // Todo: For a given sequence, store the probabilities for all the characters and in the end maybe do the average of the probabilities?
+
         }
 
-        if (alpha == 0) {
-            cout << "Alpha was not provided. Using default value: 2" << endl;
-            alpha = 1;
+        // Independently of predicting or not something, we will want to store this sequence and the position after the sequence
+
+        if (pastSequencesPositions.count(sequenceAsString) <= 0) { // If we have never seen this sequence, add it as key and a vector with the position
+            pastSequencesPositions.insert(pair<string,vector<int>>(sequenceAsString, {fileReader.getCurrentPosition()}));
+        } else { // If we saw it, just add this new position
+            pastSequencesPositions[sequenceAsString].push_back(fileReader.getCurrentPosition());
         }
 
-        if (k == 0) {
-            cout << "Window size was not provided. Using default value: 3" << endl;
-            k = 3;
-        }
+        printf("Progress: %f\r", std::round(fileReader.getCurrentPosition()*100/fileInfo.getSize()));
+        fflush(stdout);
 
-        return Input(filePath, alpha, k);
-    }
-}
-
-set<char> obtainAlphabet(string filePath) {
-
-    FILE* target = obtainTarget(filePath);
-    set<char> alphabet; int length = 0;
-
-    char c;
-    while((c = fgetc(target)) != EOF) {
-        alphabet.insert(c);
-        length++;
     }
 
-    fclose(target);
-
-    return alphabet;
-}
-
-int updateReferencePointer(map<string, vector<int>> &sequences, string &sequence) {
-
-    int referencePointer = -1;
-
-    // Check if the buffer is in the set of sequences
-    if (sequences.find(sequence) != sequences.end()) {
-        // Update the reference pointer (last occurrence)
-        referencePointer = sequences[sequence].back();
+    for (auto i : probabilitiesByCharacter) {
+        // cout << i.first << " : " << i.second/predictionsCount << endl;
+        cout << i.first << " : " << -log2(i.second / predictionsCount) << endl;
     }
 
-    return referencePointer;
+    fileReader.closeFile();
+
 }
 
-double calculateHitProbability(int Nh, int Nf, int alpha) {
-    return (double) (Nh + alpha) / (Nh + Nf + 2*alpha);
+FileInfo getFileInfo(const InputArguments& inputArguments) {
+
+    FileReader fileReader = FileReader(inputArguments.getFilePath(), inputArguments.getK());
+
+    fileReader.openFile();
+    FileInfo fileInfo = fileReader.getFileInfo();
+    fileReader.closeFile();
+
+    return fileInfo;
+
 }
 
-bool isNumber(char *s) {
-
-    for (int i = 0; i < strlen(s); ++i) {
-        if (!isdigit(s[i])) {
-            return false;
-        }
-    }
-    return true;
+FileReader getFileReaderInstance(const InputArguments& inputArguments) {
+    return FileReader(inputArguments.getFilePath(), inputArguments.getK());
 }
+
+
+
 
