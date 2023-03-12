@@ -7,6 +7,7 @@
 #include "input/InputUtils.h"
 #include "reader/FileReader.h"
 #include "hitsMisses/HitsMissesInfo.h"
+#include "modelSerializer/ModelSerializer.h"
 
 using namespace std;
 
@@ -182,29 +183,22 @@ void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha)
     }
 
 
-    //  Some probabilities for the generator
-    int cnt = 0;
+    //  Calculate probabilities for the model to be used in the generator
     for (auto i: sequenceSymbolProbabilitiesSum) {
-
         string sequence = i.first;
-        printf("%s\n", sequence.c_str());
-
         for (auto j: i.second) {
-
             char c = j.first; double prob = j.second;
 
-            int count = sequenceSymbolProbabilitiesCount[sequence];
-
             // Update final average of probabilities for sequence + symbol
+            int count = sequenceSymbolProbabilitiesCount[sequence];
             sequenceSymbolProbabilities[sequence][c] = prob/count;
-
-            cout << c << " : " << prob/count << endl;
         }
-        cout << endl;
-
-        cnt++;
-        if(cnt >= 3) break;
     }
+
+    ModelSerializer model = ModelSerializer(sequenceSymbolProbabilities);
+    // model.printModel(3);
+    model.outputModel("./model.txt"); // TODO: adjust file output, maybe command line arg?
+    // cout << endl;
 
     map<char, int> symbolsCount = fileInfo.getSymbolsCount();
     for (auto i: symbolsCount) {
@@ -226,6 +220,14 @@ void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha)
     cout << "Total Information: " << totalInformation << endl;
 
     fileReader.closeFile();
+
+    // TODO: testing loading model, delete this later
+    ModelSerializer model2 = ModelSerializer();
+    model2.loadModel("./model.txt");
+    cout << endl;
+    model2.printModel(3);
+
+
 
 }
 
