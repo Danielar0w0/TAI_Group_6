@@ -56,12 +56,4 @@ void printAlphabet(const set<char>& alphabet) {
     cout << endl;
 }
 
-void printHelp() {
-    cout << "cmp: cmp [-akf]" << endl;
-    cout << "Options:" << endl;
-    cout << "-a \t Alpha" << endl;
-    cout << "-k \t Window size" << endl;
-    cout << "-f \t File with target sequence" << endl;
-}
-
 #endif //SRC_PRINTUTILS_H
