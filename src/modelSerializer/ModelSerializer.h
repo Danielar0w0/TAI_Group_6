@@ -15,9 +15,8 @@ class ModelSerializer {
         int outputModel(const std::string& outputPath);
         int loadModel(const std::string& inputPath);
         void printModel(int lim);
-        // static std::map<std::string, std::map<char, double>> getModel();
 
-
+        std::map<std::string, std::map<char, double>> getModel();
 
 };
 

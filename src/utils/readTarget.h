@@ -46,6 +46,13 @@ bool readNextSequence(FILE* &target, char* &buffer, int k) {
         return false;
     }
 
+    while (c == 0x20 || c == 0x0A || c == 0x0D) {
+        c = fgetc(target);
+        if (c == EOF) {
+            return false;
+        }
+    }
+
     // Shift the buffer
     for (int i = 0; i < k-1; ++i) {
         buffer[i] = buffer[i+1];
