@@ -3,7 +3,7 @@
 #include <cmath>
 
 #include "utils/printUtils.h"
-#include "input/classes/InputArguments.h"
+#include "input/classes/CopyModelInputArguments.h"
 #include "input/InputUtils.h"
 #include "reader/FileReader.h"
 #include "hitsMisses/HitsMissesInfo.h"
@@ -18,26 +18,18 @@ using namespace std;
 // in response to the changing probability distribution from one encoded symbol to the next.
 
 // Threshold for the copy model
-double THRESHOLD = 0.5;
+double THRESHOLD = 0.6;
 
 void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha);
-FileInfo getFileInfo(const InputArguments& inputArguments);
-FileReader getFileReaderInstance(const InputArguments& inputArguments);
+FileInfo getFileInfo(const CopyModelInputArguments& inputArguments);
+FileReader getFileReaderInstance(const CopyModelInputArguments& inputArguments);
+string convertToString(char* a, int size);
 
-string convertToString(char* a, int size)
-{
-    int i;
-    string s = "";
-    for (i = 0; i < size; i++) {
-        s = s + a[i];
-    }
-    return s;
-}
 
 int main(int argc, char *argv[]) {
 
     // Read command line arguments
-    InputArguments inputArguments = getInputArguments(argc, argv);
+    CopyModelInputArguments inputArguments = getCopyModelInputArguments(argc, argv);
 
     bool areArgumentsValid = inputArguments.checkArguments();
 
@@ -82,8 +74,6 @@ void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha)
 
     while (fileReader.next()) {
 
-        // printSequence(fileReader.getWindowContent(), fileReader.getWindowSize());
-
         string sequenceAsString = convertToString(fileReader.getWindowContent(), fileReader.getWindowSize());
 
         // Let's try to predict
@@ -101,18 +91,15 @@ void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha)
             int currentPointerForCurrentSequence = sequenceCurrentPointer[sequenceAsString];
 
             // Which character are we predicting that will come next?
-            char predictedCharacter = fileReader.getCache()[currentPointerForCurrentSequence+1];
+            char predictedCharacter = fileReader.getCache()[currentPointerForCurrentSequence];
 
             // Which character was indeed next?
             char futureCharacter = fileReader.getFutureCharacter();
 
             HitsMissesInfo hitsMissesInfo = HitsMissesInfo();
 
-            if (hitsAndMissesForEachSequence.count(sequenceAsString) > 0 &&
-                hitsAndMissesForEachSequence[sequenceAsString].first == predictedCharacter) {
-
+            if (hitsAndMissesForEachSequence.count(sequenceAsString) > 0 && hitsAndMissesForEachSequence[sequenceAsString].first == predictedCharacter) {
                 hitsMissesInfo = hitsAndMissesForEachSequence[sequenceAsString].second;
-
             }
 
             if (predictedCharacter == futureCharacter) { // Then we have a hit! :)
@@ -131,7 +118,8 @@ void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha)
             double probabilityForPredictedCharacter = calculateHitProbability(hitsForPredictedCharacter, missesForPredictedCharacter, alpha);
 
             // If our probability is below our threshold we need to change the pointer for our sequence because the current pointer is bad!
-            if (probabilityForPredictedCharacter < THRESHOLD) {
+            // HOWEVER, we can only change pointer in we have another pointer to change to (check if size is greater than 1).
+            if (probabilityForPredictedCharacter < THRESHOLD && pastSequencesPositions[sequenceAsString].size() > 1) {
 
                 // Change the pointer to another one
                 int nextPointerIndex = ++sequenceCurrentPointerIndex[sequenceAsString];
@@ -184,7 +172,7 @@ void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha)
 
 
     //  Calculate probabilities for the model to be used in the generator
-    for (auto i: sequenceSymbolProbabilitiesSum) {
+    for (const auto& i: sequenceSymbolProbabilitiesSum) {
         string sequence = i.first;
         for (auto j: i.second) {
             char c = j.first; double prob = j.second;
@@ -196,9 +184,7 @@ void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha)
     }
 
     ModelSerializer model = ModelSerializer(sequenceSymbolProbabilities);
-    // model.printModel(3);
     model.outputModel("./model.txt"); // TODO: adjust file output, maybe command line arg?
-    // cout << endl;
 
     map<char, int> symbolsCount = fileInfo.getSymbolsCount();
     for (auto i: symbolsCount) {
@@ -221,17 +207,9 @@ void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha)
 
     fileReader.closeFile();
 
-    // TODO: testing loading model, delete this later
-    ModelSerializer model2 = ModelSerializer();
-    model2.loadModel("./model.txt");
-    cout << endl;
-    model2.printModel(3);
-
-
-
 }
 
-FileInfo getFileInfo(const InputArguments& inputArguments) {
+FileInfo getFileInfo(const CopyModelInputArguments& inputArguments) {
 
     FileReader fileReader = FileReader(inputArguments.getFilePath(), inputArguments.getK());
 
@@ -242,10 +220,14 @@ FileInfo getFileInfo(const InputArguments& inputArguments) {
     return fileInfo;
 }
 
-FileReader getFileReaderInstance(const InputArguments& inputArguments) {
+FileReader getFileReaderInstance(const CopyModelInputArguments& inputArguments) {
     return FileReader(inputArguments.getFilePath(), inputArguments.getK());
 }
 
-
-
-
+string convertToString(char* a, int size) {
+    int i;
+    string s;
+    for (i = 0; i < size; i++)
+        s += a[i];
+    return s;
+}
