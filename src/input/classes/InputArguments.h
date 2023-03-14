@@ -1,5 +1,5 @@
-#ifndef SRC_COPYMODELINPUTARGUMENTS_H
-#define SRC_COPYMODELINPUTARGUMENTS_H
+#ifndef SRC_INPUTARGUMENTS_H
+#define SRC_INPUTARGUMENTS_H
 
 #include <string>
 using namespace std;
@@ -10,7 +10,7 @@ using namespace std;
 // Window size
 // int K = 11;
 
-class CopyModelInputArguments {
+class InputArguments {
 
     double alpha;
     int k;
@@ -18,7 +18,7 @@ class CopyModelInputArguments {
 
     public:
 
-        CopyModelInputArguments(string filePath, double alpha, int k);
+        InputArguments(string filePath, double alpha, int k);
 
         [[nodiscard]] double getAlpha() const;
         [[nodiscard]] int getK() const;
@@ -27,9 +27,7 @@ class CopyModelInputArguments {
         // Don't add nodiscard - I may want to check the arguments and do nothing with the return value.
         bool checkArguments() const;
 
-        static void printUsage();
-
 };
 
 
-#endif //SRC_COPYMODELINPUTARGUMENTS_H
+#endif //SRC_INPUTARGUMENTS_H

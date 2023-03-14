@@ -1,26 +1,26 @@
-#include "CopyModelInputArguments.h"
+#include "InputArguments.h"
 
 #include <iostream>
 
-CopyModelInputArguments::CopyModelInputArguments(string filePath, double alpha, int k) {
+InputArguments::InputArguments(string filePath, double alpha, int k) {
     this->alpha = alpha;
     this->k = k;
     this->filePath = std::move(filePath);
 }
 
-double CopyModelInputArguments::getAlpha() const {
+double InputArguments::getAlpha() const {
     return this->alpha;
 }
 
-int CopyModelInputArguments::getK() const {
+int InputArguments::getK() const {
     return this->k;
 }
 
-string CopyModelInputArguments::getFilePath() const {
+string InputArguments::getFilePath() const {
     return this->filePath;
 }
 
-bool CopyModelInputArguments::checkArguments() const {
+bool InputArguments::checkArguments() const {
 
     if (this->alpha <= 0 || this->alpha > 5) {
         std::cerr << "[!!!] Alpha should be a value in the interval ]0, 5]." << endl;
@@ -39,12 +39,4 @@ bool CopyModelInputArguments::checkArguments() const {
 
     return true;
 
-}
-
-void CopyModelInputArguments::printUsage() {
-    cout << "cmp: cmp [-akf]" << endl;
-    cout << "Options:" << endl;
-    cout << "-a \t Alpha" << endl;
-    cout << "-k \t Window size" << endl;
-    cout << "-f \t File with target sequence" << endl;
 }

@@ -111,8 +111,8 @@ void ModelSerializer::printModel(int lim = -1) {
     }
 }
 
-map<string, map<char, double>> ModelSerializer::getModel() {
-    return this->model;
-}
+//map<string, map<char, double>> ModelSerializer::getModel() {
+//    return this->model;
+//}
 
 
