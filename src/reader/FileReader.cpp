@@ -66,7 +66,8 @@ void FileReader::readInitialWindow() {
 
     }
 
-    this->futureCharacter = (char) fgetc(this->targetFile);
+    character = (char) fgetc(this->targetFile);
+    this->futureCharacter = character;
     this->cache.push_back(character);
 
     this->currentPosition = this->windowSize;

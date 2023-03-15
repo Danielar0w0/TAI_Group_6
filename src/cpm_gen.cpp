@@ -27,6 +27,8 @@ int main(int argc, char *argv[]) {
 
     std::map<std::string, std::map<char, double>> model = copyModelSerializer.getModel();
 
+    std::vector<char> generatedCharacters;
+
     do {
 
         cout << "Enter a sequence: ";
@@ -48,7 +50,7 @@ int main(int argc, char *argv[]) {
             if (model.count(currentWindow) <= 0)
                 break;
 
-            char nextChar = getNextCharacterCustom(model[currentWindow]);
+            char nextChar = getNextCharacterUniform(model[currentWindow]);
 
             // getNextCharacterCustom(model[currentWindow]);
 
@@ -103,13 +105,13 @@ char getNextCharacterCustom(const std::map<char, double>& charactersProbabilityD
 
     double randomPercentage = percentageDistribution(mt);
 
-    if (randomPercentage <= 0.9) {
+    if (randomPercentage <= 0.95) {
         return charactersProbabilityDistributionOrdered[0].first;
-    } else if (randomPercentage <= 0.95) {
+    } else if (randomPercentage <= 0.975) {
         std::uniform_int_distribution<int> character(1, 4);
         int random = character(mt);
         return charactersProbabilityDistributionOrdered[random].first;
-    } else if (randomPercentage <= 0.975) {
+    } else if (randomPercentage <= 0.985) {
         std::uniform_int_distribution<int> character(5, 9);
         int random = character(mt);
         return charactersProbabilityDistributionOrdered[random].first;
