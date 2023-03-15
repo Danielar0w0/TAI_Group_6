@@ -18,7 +18,7 @@ using namespace std;
 // in response to the changing probability distribution from one encoded symbol to the next.
 
 // Threshold for the copy model
-double THRESHOLD = 0.6;
+double THRESHOLD = 0.5;
 
 void analyseFileSequence(FileReader fileReader, FileInfo fileInfo, double alpha);
 FileInfo getFileInfo(const CopyModelInputArguments& inputArguments);

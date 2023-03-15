@@ -4,7 +4,8 @@
 #include "input/InputUtils.h"
 #include "modelSerializer/ModelSerializer.h"
 
-char getNextCharacter(const std::map<char, double>& map);
+char getNextCharacterUniform(const std::map<char, double>& map);
+char getNextCharacterCustom(const std::map<char, double>& charactersProbabilityDistributionMap);
 
 int main(int argc, char *argv[]) {
 
@@ -29,7 +30,7 @@ int main(int argc, char *argv[]) {
     do {
 
         cout << "Enter a sequence: ";
-        std::cin >> input;
+        std::getline(std::cin, input);
 
         if (model.count(input) <= 0) {
             cout << "[!] Unable to find data for '" << input << "' in the model." << endl;
@@ -47,7 +48,9 @@ int main(int argc, char *argv[]) {
             if (model.count(currentWindow) <= 0)
                 break;
 
-            char nextChar = getNextCharacter(model[currentWindow]);
+            char nextChar = getNextCharacterCustom(model[currentWindow]);
+
+            // getNextCharacterCustom(model[currentWindow]);
 
             currentWindow += nextChar;
             currentWindow = currentWindow.substr(1, currentWindow.length() - 1);
@@ -64,7 +67,7 @@ int main(int argc, char *argv[]) {
 
 }
 
-char getNextCharacter(const std::map<char, double>& map) {
+char getNextCharacterUniform(const std::map<char, double>& map) {
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -80,5 +83,40 @@ char getNextCharacter(const std::map<char, double>& map) {
     }
 
     return map.begin()->first;
+
+}
+
+bool sort_by_value(const pair<char, double>& a, const pair<char, double>& b) {
+    return a.second > b.second;
+}
+
+char getNextCharacterCustom(const std::map<char, double>& charactersProbabilityDistributionMap) {
+
+    vector<pair<char, double>> charactersProbabilityDistributionOrdered(charactersProbabilityDistributionMap.begin(),
+                                                                        charactersProbabilityDistributionMap.end());
+
+    std::sort(charactersProbabilityDistributionOrdered.begin(), charactersProbabilityDistributionOrdered.end(), sort_by_value);
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<double> percentageDistribution(0.0, 1.0);
+
+    double randomPercentage = percentageDistribution(mt);
+
+    if (randomPercentage <= 0.9) {
+        return charactersProbabilityDistributionOrdered[0].first;
+    } else if (randomPercentage <= 0.95) {
+        std::uniform_int_distribution<int> character(1, 4);
+        int random = character(mt);
+        return charactersProbabilityDistributionOrdered[random].first;
+    } else if (randomPercentage <= 0.975) {
+        std::uniform_int_distribution<int> character(5, 9);
+        int random = character(mt);
+        return charactersProbabilityDistributionOrdered[random].first;
+    } else {
+        std::uniform_int_distribution<int> character(10, (int) charactersProbabilityDistributionOrdered.size());
+        int random = character(mt);
+        return charactersProbabilityDistributionOrdered[random].first;
+    }
 
 }
