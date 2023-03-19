@@ -28,8 +28,9 @@ FILE* FileReader::openFile() {
 
 }
 
-char* FileReader::getWindowContent() {
-    return this->currentWindow;
+void FileReader::closeFile() {
+    if (this->targetFile != nullptr)
+        fclose(this->targetFile);
 }
 
 bool FileReader::next() {
@@ -44,11 +45,34 @@ bool FileReader::next() {
 
 }
 
-void FileReader::closeFile() {
-    if (this->targetFile != nullptr)
-        fclose(this->targetFile);
+bool FileReader::nextCharacter() {
+
+    if (this->targetFile == nullptr)
+        throw std::runtime_error("Target file is a null pointer!");
+
+    char character = (char) fgetc(this->targetFile);
+
+    if (character == EOF)
+        return false;
+
+    this->nextCharacterInSequence = character;
+    this->cache.push_back(character);
+    this->currentSequence.push_back(character);
+
+    ++this->currentPosition;
+
+    return true;
+
 }
 
+void FileReader::resetCurrentSequence() {
+
+    this->currentSequence.clear();
+
+    for (int i = 0; i < this->windowSize; ++i)
+        this->currentSequence.push_back(this->currentWindow[i]);
+
+}
 
 void FileReader::readInitialWindow() {
 
@@ -66,9 +90,8 @@ void FileReader::readInitialWindow() {
 
     }
 
-    character = (char) fgetc(this->targetFile);
-    this->futureCharacter = character;
-    this->cache.push_back(character);
+    FileReader::resetCurrentSequence();
+    FileReader::nextCharacter();
 
     this->currentPosition = this->windowSize;
 
@@ -79,23 +102,14 @@ bool FileReader::shiftWindow() {
     if (this->targetFile == nullptr)
         throw std::runtime_error("Target file is a null pointer!");
 
-    char character = (char) fgetc(this->targetFile);
-
-    if (character == EOF)
-        return false;
-
     // Shift the buffer
     for (int i = 0; i < this->windowSize-1; ++i)
-        this->currentWindow[i] = this->currentWindow[i+1];
+        this->currentWindow[i] = this->currentSequence[this->currentSequence.size()-(this->windowSize-i)];
 
-    this->currentWindow[this->windowSize-1] = this->futureCharacter;
+    this->currentWindow[this->windowSize-1] = this->nextCharacterInSequence;
 
-    this->futureCharacter = character;
-    this->cache.push_back(character);
-
-    ++this->currentPosition;
-
-    return true;
+    FileReader::resetCurrentSequence();
+    return FileReader::nextCharacter();
 
 }
 
@@ -132,10 +146,14 @@ std::vector<char>* FileReader::getCache() {
     return &this->cache;
 }
 
-char FileReader::getFutureCharacter() const {
-    return this->futureCharacter;
+char FileReader::getNextCharacterInSequence() const {
+    return this->nextCharacterInSequence;
 }
 
+std::vector<char>* FileReader::getCurrentSequence() {
+    return &this->currentSequence;
+}
 
-
-
+char* FileReader::getWindowContent() {
+    return this->currentWindow;
+}
