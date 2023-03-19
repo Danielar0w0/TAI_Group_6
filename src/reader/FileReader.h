@@ -33,7 +33,7 @@ class FileReader {
         FileInfo getFileInfo();
 
         char* getWindowContent();
-        std::vector<char> getCache();
+        std::vector<char>* getCache();
 
         [[nodiscard]] int getWindowSize() const;
         [[nodiscard]] int getCurrentPosition() const;

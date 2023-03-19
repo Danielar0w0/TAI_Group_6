@@ -128,8 +128,8 @@ int FileReader::getCurrentPosition() const {
     return this->currentPosition;
 }
 
-std::vector<char> FileReader::getCache() {
-    return this->cache;
+std::vector<char>* FileReader::getCache() {
+    return &this->cache;
 }
 
 char FileReader::getFutureCharacter() const {

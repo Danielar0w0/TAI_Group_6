@@ -6,6 +6,7 @@
 
 char getNextCharacterUniform(const std::map<char, double>& map);
 char getNextCharacterCustom(const std::map<char, double>& charactersProbabilityDistributionMap);
+char getNextCharacterBacktracking(const std::string& currentWindow, std::map<std::string, std::map<char, double>> model);
 
 int main(int argc, char *argv[]) {
 
@@ -21,8 +22,9 @@ int main(int argc, char *argv[]) {
 
     cout << "-=-=-==-=-=-=-=-==-=-=-[ GENERATOR ]-=-=-==-=-=-=-=-==-=-=-" << endl;
     cout << endl;
-    cout << "Write a sentence with 3 characters MAX and the generator will try to complete the sentence with "
-        << generatorInputArguments.getAmountOfCharactersToGenerate() << " more characters." << endl;
+    cout << "Write a sentence and the generator will try to complete it." << endl;
+    cout << "Generating at most more " << generatorInputArguments.getAmountOfCharactersToGenerate() << " characters." << endl;
+    cout << endl;
     cout << "When you are done, type 'exit'." << endl << endl;
 
     std::map<std::string, std::map<char, double>> model = copyModelSerializer.getModel();
@@ -34,13 +36,18 @@ int main(int argc, char *argv[]) {
         cout << "Enter a sequence: ";
         std::getline(std::cin, input);
 
-        if (model.count(input) <= 0) {
+        if (input.size() < 3) {
+            cout << "[!] Please enter a sequence with at least 3 characters." << endl;
+            continue;
+        }
+
+        std::string currentWindow = input.substr(input.size()-3, input.size());
+
+        if (model.count(currentWindow) <= 0) {
             cout << "[!] Unable to find data for '" << input << "' in the model." << endl;
             cout << "[!] Please try again with a different sequence." << endl;
             continue;
         }
-
-        std::string currentWindow = input;
 
         cout << "[-] ";
         cout << "(" << input << ")";
@@ -50,9 +57,7 @@ int main(int argc, char *argv[]) {
             if (model.count(currentWindow) <= 0)
                 break;
 
-            char nextChar = getNextCharacterUniform(model[currentWindow]);
-
-            // getNextCharacterCustom(model[currentWindow]);
+            char nextChar = getNextCharacterBacktracking(currentWindow, model);
 
             currentWindow += nextChar;
             currentWindow = currentWindow.substr(1, currentWindow.length() - 1);
@@ -66,6 +71,44 @@ int main(int argc, char *argv[]) {
     } while (input != "exit");
 
     return 0;
+
+}
+
+bool sort_by_value(const pair<char, double>& a, const pair<char, double>& b) {
+    return a.second > b.second;
+}
+
+char getNextCharacterBacktracking(const std::string& currentWindow, std::map<std::string, std::map<char, double>> model) {
+
+    std::map<char, double> charactersProbabilityDistributionMap = model[currentWindow];
+    vector<pair<char, double>> charactersProbabilityDistributionOrdered(charactersProbabilityDistributionMap.begin(),
+                                                                        charactersProbabilityDistributionMap.end());
+
+    std::sort(charactersProbabilityDistributionOrdered.begin(), charactersProbabilityDistributionOrdered.end(),
+              sort_by_value);
+
+    int max_tries = 1000;
+
+    std::string nextWindow;
+    int currentIndex = 0;
+    int tries_counter = 0;
+    char nextCharacterPrediction;
+
+    do {
+
+        // nextCharacterPrediction = charactersProbabilityDistributionOrdered[currentIndex++].first;
+        nextCharacterPrediction = getNextCharacterUniform(charactersProbabilityDistributionMap);
+        // nextCharacterPrediction = getNextCharacterCustom(charactersProbabilityDistributionMap);
+
+        nextWindow = currentWindow.substr(1, currentWindow.size()-1) + nextCharacterPrediction;
+
+        if (++tries_counter == max_tries) {
+            nextCharacterPrediction = charactersProbabilityDistributionOrdered[0].first;
+        }
+
+    } while (model.count(nextWindow) <= 0 && tries_counter < max_tries);
+
+    return nextCharacterPrediction;
 
 }
 
@@ -88,9 +131,6 @@ char getNextCharacterUniform(const std::map<char, double>& map) {
 
 }
 
-bool sort_by_value(const pair<char, double>& a, const pair<char, double>& b) {
-    return a.second > b.second;
-}
 
 char getNextCharacterCustom(const std::map<char, double>& charactersProbabilityDistributionMap) {
 
@@ -105,13 +145,13 @@ char getNextCharacterCustom(const std::map<char, double>& charactersProbabilityD
 
     double randomPercentage = percentageDistribution(mt);
 
-    if (randomPercentage <= 0.95) {
+    if (randomPercentage <= 0.70) {
         return charactersProbabilityDistributionOrdered[0].first;
-    } else if (randomPercentage <= 0.975) {
+    } else if (randomPercentage <= 0.85) {
         std::uniform_int_distribution<int> character(1, 4);
         int random = character(mt);
         return charactersProbabilityDistributionOrdered[random].first;
-    } else if (randomPercentage <= 0.985) {
+    } else if (randomPercentage <= 0.95) {
         std::uniform_int_distribution<int> character(5, 9);
         int random = character(mt);
         return charactersProbabilityDistributionOrdered[random].first;
