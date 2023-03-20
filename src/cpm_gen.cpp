@@ -2,11 +2,19 @@
 #include <random>
 #include "input/classes/GeneratorInputArguments.h"
 #include "input/InputUtils.h"
-#include "modelSerializer/ModelSerializer.h"
+#include "model_serialization/handler/ModelSerializerHandler.h"
+#include "model_serialization/implementation/ProbabilisticModelSerializer.h"
+#include "model_serialization/implementation/SequentialModelSerializer.h"
 
 char getNextCharacterUniform(const std::map<char, double>& map);
 char getNextCharacterCustom(const std::map<char, double>& charactersProbabilityDistributionMap);
 char getNextCharacterBacktracking(const std::string& currentWindow, std::map<std::string, std::map<char, double>> model);
+void callProbabilisticGenerator(ProbabilisticModelSerializer copyModelSerializer,
+                                const GeneratorInputArguments& generatorInputArguments);
+
+void callSequentialGenerator(SequentialModelSerializer copyModelSerializer,
+                             const GeneratorInputArguments& generatorInputArguments);
+
 
 int main(int argc, char *argv[]) {
 
@@ -15,8 +23,36 @@ int main(int argc, char *argv[]) {
     cout << "Model File Path: " << generatorInputArguments.getModelPath() << endl;
     cout << "Amount of Characters to Generate: " << generatorInputArguments.getAmountOfCharactersToGenerate() << endl;
 
-    ModelSerializer copyModelSerializer = ModelSerializer();
-    copyModelSerializer.loadModel(generatorInputArguments.getModelPath());
+    ModelType modelType = ModelSerializerHandler::getModelType("/Users/hugogoncalves/Documents/Faculdade/Mestrado/Semestre_2/TAI/TAI_Group_6/output.txt");
+
+    if (modelType == ModelType::SEQUENTIAL) {
+
+        cout << "[!] Sequential Model Detected!!!" << endl;
+
+        SequentialModelSerializer sequentialModelSerializer = SequentialModelSerializer(generatorInputArguments.getModelPath());
+        sequentialModelSerializer.loadModel();
+
+        callSequentialGenerator(sequentialModelSerializer, generatorInputArguments);
+
+
+    } else if (modelType == ModelType::PROBABILISTIC) {
+
+        cout << "Model Type: Probabilistic" << endl;
+
+        ProbabilisticModelSerializer probabilisticModelSerializer = ProbabilisticModelSerializer(generatorInputArguments.getModelPath());
+        probabilisticModelSerializer.loadModel();
+
+        callProbabilisticGenerator(probabilisticModelSerializer, generatorInputArguments);
+
+    } else {
+        cout << "Model Type: Unknown" << endl;
+    }
+
+    return 0;
+
+}
+
+void callProbabilisticGenerator(ProbabilisticModelSerializer copyModelSerializer, const GeneratorInputArguments& generatorInputArguments) {
 
     std::string input;
 
@@ -70,7 +106,66 @@ int main(int argc, char *argv[]) {
 
     } while (input != "exit");
 
-    return 0;
+}
+
+void callSequentialGenerator(SequentialModelSerializer copyModelSerializer, const GeneratorInputArguments& generatorInputArguments) {
+
+    std::string input;
+
+    cout << "-=-=-==-=-=-=-=-==-=-=-[ GENERATOR ]-=-=-==-=-=-=-=-==-=-=-" << endl;
+    cout << endl;
+    cout << "Write a sentence and the generator will try to complete it." << endl;
+    cout << "Generating at most more " << generatorInputArguments.getAmountOfCharactersToGenerate() << " characters." << endl;
+    cout << endl;
+    cout << "When you are done, type 'exit'." << endl << endl;
+
+    std::map<std::string, std::string> model = copyModelSerializer.getModel();
+
+    std::vector<char> generatedCharacters;
+
+    do {
+
+        cout << "Enter a sequence: ";
+        std::getline(std::cin, input);
+
+        if (input.size() < 3) {
+            cout << "[!] Please enter a sequence with at least 3 characters." << endl;
+            continue;
+        }
+
+        std::string currentWindow = input.substr(input.size()-3, input.size());
+
+        if (model.count(currentWindow) <= 0) {
+            cout << "[!] Unable to find data for '" << input << "' in the model." << endl;
+            cout << "[!] Please try again with a different sequence." << endl;
+            continue;
+        }
+
+        cout << "[-] ";
+
+        std::string completedOutput = currentWindow;
+
+        if (model[currentWindow].size() > 4) {
+            completedOutput += model[currentWindow].substr(3, model[currentWindow].size()-1);
+        }
+
+        while (completedOutput.size() < generatorInputArguments.getAmountOfCharactersToGenerate()) {
+
+            currentWindow = completedOutput.substr(completedOutput.size()-3, completedOutput.size());
+
+            if (model.count(currentWindow) <= 0)
+                break;
+
+            if (model[currentWindow].size() > 4) {
+                completedOutput += model[currentWindow].substr(3, model[currentWindow].size()-1);
+            }
+
+        }
+
+        cout << completedOutput << endl;
+        cout << endl;
+
+    } while (input != "exit");
 
 }
 
@@ -130,7 +225,6 @@ char getNextCharacterUniform(const std::map<char, double>& map) {
     return map.begin()->first;
 
 }
-
 
 char getNextCharacterCustom(const std::map<char, double>& charactersProbabilityDistributionMap) {
 

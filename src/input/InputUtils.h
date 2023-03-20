@@ -6,7 +6,7 @@
 
 #include "classes/CopyModelInputArguments.h"
 #include "../utils/printUtils.h"
-#include "../utils/utils.h"
+#include "../utils/generalUtils.h"
 #include "classes/GeneratorInputArguments.h"
 
 using namespace std;

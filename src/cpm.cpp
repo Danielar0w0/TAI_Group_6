@@ -1,5 +1,4 @@
 #include <iostream>
-#include <string>
 #include <cmath>
 
 #include "utils/printUtils.h"
@@ -7,10 +6,12 @@
 #include "input/InputUtils.h"
 #include "reader/FileReader.h"
 #include "hitsMisses/HitsMissesInfo.h"
-#include "modelSerializer/ModelSerializer.h"
+#include "model_serialization/implementation/ProbabilisticModelSerializer.h"
+#include "reader/SequentialFileReader.h"
+#include "model_serialization/implementation/SequentialModelSerializer.h"
 
 // Threshold for the copy model
-#define THRESHOLD 0.4
+#define THRESHOLD 0.45
 
 using namespace std;
 
@@ -24,8 +25,6 @@ void analyseFileSequenceWithFixedWindow(FileReader fileReader, FileInfo fileInfo
 void analyseFileSequenceWithGrowingWindow(FileReader fileReader, FileInfo fileInfo, double alpha);
 FileInfo getFileInfo(const CopyModelInputArguments& inputArguments);
 FileReader getFileReaderInstance(const CopyModelInputArguments& inputArguments);
-string convertCharArrayToString(char* a, int size);
-string convertCharVectorToString(std::vector<char> vector);
 
 
 int main(int argc, char *argv[]) {
@@ -49,7 +48,7 @@ int main(int argc, char *argv[]) {
     // Get File Reader instance for second pass
     FileReader fileReader = getFileReaderInstance(inputArguments);
 
-    analyseFileSequenceWithGrowingWindow(fileReader, fileInfo, inputArguments.getAlpha());
+    analyseFileSequenceWithFixedWindow(fileReader, fileInfo, inputArguments.getAlpha());
 
 }
 
@@ -185,9 +184,6 @@ void analyseFileSequenceWithFixedWindow(FileReader fileReader, FileInfo fileInfo
         }
     }
 
-    ModelSerializer model = ModelSerializer(sequenceSymbolProbabilities);
-    model.outputModel("./model.txt"); // TODO: adjust file output, maybe command line arg?
-
     map<char, int> symbolsCount = fileInfo.getSymbolsCount();
     for (auto i: symbolsCount) {
         cout << i.first << " : " << i.second << endl;
@@ -204,6 +200,12 @@ void analyseFileSequenceWithFixedWindow(FileReader fileReader, FileInfo fileInfo
         c = i.first; count = i.second;
         totalInformation += count * -log2(probabilitiesByCharacter[c] / predictionsCount);
     }
+
+    ProbabilisticModelSerializer probabilisticModelSerializer = ProbabilisticModelSerializer("output.txt");
+
+    probabilisticModelSerializer.setModel(sequenceSymbolProbabilities);
+    probabilisticModelSerializer.outputModel();
+
     cout << endl;
     cout << "Total Information: " << totalInformation << endl;
 
@@ -217,6 +219,7 @@ void analyseFileSequenceWithGrowingWindow(FileReader fileReader, FileInfo fileIn
     std::map<string, int> currentPointerIndexForSequence;
     std::map<char, double> probabilitiesForCharacter;
     std::map<char, int> characterProbabilitiesCount;
+    std::map<string, string> bestCopyForWindow;
 
     double totalAmountOfInformation = 0;
 
@@ -250,7 +253,7 @@ void analyseFileSequenceWithGrowingWindow(FileReader fileReader, FileInfo fileIn
             // Hits and misses info for the current copy model
             HitsMissesInfo hitsMissesInfo;
 
-            // Expand window untill we reach the end of the file of the probability reaches a certain threshold
+            // Expand window until we reach the end of the file of the probability reaches a certain threshold
             do {
 
                 char predictedChar = fileReader.getCache()->operator[](pastSequencePosition);
@@ -290,7 +293,19 @@ void analyseFileSequenceWithGrowingWindow(FileReader fileReader, FileInfo fileIn
 
             } while (probabilityOfCorrectPrediction > THRESHOLD && fileReader.nextCharacter());
 
-            // We are stoping this copy model because we reached the threshold
+            // When we leave the loop we are stopping the copy model!
+            string correspondingWindow = convertCharVectorToString(*fileReader.getCurrentSequence()).substr(0, fileReader.getWindowSize());
+            std::vector<char> currentSequenceVector(fileReader.getCurrentSequence()->size());
+
+            std::copy(fileReader.getCurrentSequence()->begin(), fileReader.getCurrentSequence()->end(), currentSequenceVector.begin());
+
+            if (bestCopyForWindow.count(correspondingWindow) <= 0) {
+                bestCopyForWindow.insert(std::make_pair(correspondingWindow, convertCharVectorToString(currentSequenceVector)));
+            } else if (bestCopyForWindow[correspondingWindow].size() < currentSequenceVector.size()) {
+                bestCopyForWindow[correspondingWindow] = convertCharVectorToString(currentSequenceVector);
+            }
+
+            // We are stopping this copy model because we reached the threshold
             if (probabilityOfCorrectPrediction <= THRESHOLD && pastSequencesPositions[sequenceAsString].size() > 1) {
                 // Change the pointer to the next one
                 ++currentPointerIndexForSequence[sequenceAsString];
@@ -323,6 +338,11 @@ void analyseFileSequenceWithGrowingWindow(FileReader fileReader, FileInfo fileIn
 
     }
 
+    SequentialModelSerializer sequentialModelSerializer = SequentialModelSerializer("output.txt");
+
+    sequentialModelSerializer.setModel(bestCopyForWindow);
+    sequentialModelSerializer.outputModel();
+
     cout << "Total Amount of Information: " << totalAmountOfInformation << endl;
 
 }
@@ -342,18 +362,4 @@ FileReader getFileReaderInstance(const CopyModelInputArguments& inputArguments) 
     return FileReader(inputArguments.getFilePath(), inputArguments.getK());
 }
 
-string convertCharArrayToString(char* a, int size) {
-    int i;
-    string s;
-    for (i = 0; i < size; i++)
-        s += a[i];
-    return s;
-}
 
-string convertCharVectorToString(std::vector<char> vector) {
-    int i;
-    string s;
-    for (i = 0; i < vector.size(); i++)
-        s += vector[i];
-    return s;
-}

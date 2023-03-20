@@ -1,31 +1,34 @@
-#include "ModelSerializer.h"
-
 #include <utility>
 #include <string>
 #include <iostream>
 #include <fstream>
 
+#include "ProbabilisticModelSerializer.h"
+#include "../utils/ModelType.h"
+
 using namespace std;
 
-ModelSerializer::ModelSerializer() = default;
+bool ProbabilisticModelSerializer::outputModel() {
 
-ModelSerializer::ModelSerializer(map<string, map<char, double>> model) {
-    this->model = std::move(model);
-}
-
-int ModelSerializer::outputModel(const string& outputPath) {
     // Check if model is not empty
     if(this->model.empty()) {
         cerr << "Cannot output model because model is empty." << endl;
-        return 1;
+        return false;
     }
 
     // Create file
-    FILE* target = fopen(outputPath.c_str(), "w");
+    FILE* target = fopen(this->modelPath.c_str(), "w");
 
     if (target == nullptr) {
-        cerr << "Error creating text file " << outputPath.c_str() << ": " << stderr << endl;
-        return 1;
+        cerr << "Error creating text file " << this->modelPath.c_str() << ": " << stderr << endl;
+        return false;
+    }
+
+    int writeStatus = fprintf(target, "Model Type - %s:%i\n", modelTypeToString(ModelType::PROBABILISTIC).c_str(), ModelType::PROBABILISTIC);
+
+    if(writeStatus < 0) {
+        cerr << "Error writing to text file " << this->modelPath.c_str() << ": " << stderr << endl;
+        return false;
     }
 
     // Iterate over map
@@ -34,28 +37,35 @@ int ModelSerializer::outputModel(const string& outputPath) {
         for (auto j: i.second) {
             char c = j.first;
             double prob = j.second;
-            int written = fprintf(target,"%s;%c;%f\n", sequence.c_str(), c, prob);
-            if(written < 0) {
-                cerr << "Error writing to text file " << outputPath.c_str() << ": " << stderr << endl;
-                return 1;
+            writeStatus = fprintf(target,"%s;%c;%f\n", sequence.c_str(), c, prob);
+            if(writeStatus < 0) {
+                cerr << "Error writing to text file " << this->modelPath.c_str() << ": " << stderr << endl;
+                return false;
             }
         }
     }
 
     fclose(target);
-    return 0;
+    return true;
+
 }
 
-int ModelSerializer::loadModel(const string& inputPath) {
+bool ProbabilisticModelSerializer::loadModel() {
+
     // Check if model is empty, if not, empty it
     if(!this->model.empty()) this->model.clear();
 
     // Open file
     fstream file;
-    file.open(inputPath.c_str(), ios::in);
-    if(file.is_open()) {
+    file.open(this->modelPath.c_str(), ios::in);
+
+    if (file.is_open()) {
+
         string line;
         int lineCount = 0;
+
+        getline(file, line); // Ignore first line
+
         while(getline(file, line)) { // Read file line by line
             // Parse obtained line
             string sequence;
@@ -65,7 +75,7 @@ int ModelSerializer::loadModel(const string& inputPath) {
             size_t pos = line.find(';');
             if(pos == std::string::npos) {
                 cerr << "Error parsing text file in line: " << lineCount << ": wrong model format." << endl;
-                return 1;
+                return false;
             }
             sequence = line.substr(0, pos);
             line.erase(0, pos + 1); // erase sequence and delimiter from line
@@ -74,7 +84,7 @@ int ModelSerializer::loadModel(const string& inputPath) {
             pos = line.find(';');
             if(pos == std::string::npos) {
                 cerr << "Error parsing text file in line: " << lineCount << ": wrong model format." << endl;
-                return 1;
+                return false;
             }
             c = line.substr(0, pos).at(0);
             line.erase(0, pos + 1); // erase char and delimiter from line
@@ -87,32 +97,24 @@ int ModelSerializer::loadModel(const string& inputPath) {
 
             lineCount++;
         }
+
         file.close();
+
+    } else {
+        cerr << "Error opening text file " << this->modelPath.c_str() << ": " << stderr << endl;
+        return false;
     }
-    else {
-        cerr << "Error opening text file " << inputPath.c_str() << ": " << stderr << endl;
-        return 1;
-    }
-    return 0;
+
+    return true;
+
 }
 
-void ModelSerializer::printModel(int lim = -1) {
-    int cnt = 0;
-    for (const auto& i: this->model) {
-        string sequence = i.first;
-        printf("%s:\n",sequence.c_str());
-        for (auto j: i.second) {
-            char c = j.first;
-            double prob = j.second;
-            printf("\t%c: %f\n", c, prob);
-        }
-        cnt++;
-        if(lim > 0 && cnt >= lim) break;
-    }
-}
-
-map<string, map<char, double>> ModelSerializer::getModel() {
+map<string, map<char, double>> ProbabilisticModelSerializer::getModel() {
     return this->model;
+}
+
+void ProbabilisticModelSerializer::setModel(std::map<std::string, std::map<char, double>> modelToSet) {
+    this->model = std::move(modelToSet);
 }
 
 
