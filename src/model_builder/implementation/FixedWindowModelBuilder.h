@@ -7,7 +7,7 @@
 #include <iostream>
 
 #include "../../reader/FileReader.h"
-#include "../../hitsMisses/HitsMissesInfo.h"
+#include "../utils/HitsMissesInfo.h"
 #include "../../utils/generalUtils.h"
 #include "../abstract/AbstractModelBuilder.h"
 

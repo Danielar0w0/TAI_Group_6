@@ -4,7 +4,7 @@
 #include "utils/printUtils.h"
 #include "input/classes/CopyModelInputArguments.h"
 #include "reader/FileReader.h"
-#include "hitsMisses/HitsMissesInfo.h"
+#include "model_builder/utils/HitsMissesInfo.h"
 #include "model_serialization/implementation/ProbabilisticModelSerializer.h"
 #include "model_serialization/implementation/SequentialModelSerializer.h"
 #include "model_builder/implementation/FixedWindowModelBuilder.h"

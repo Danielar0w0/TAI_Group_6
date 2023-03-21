@@ -5,7 +5,7 @@
 #include <cmath>
 #include "../abstract/AbstractModelBuilder.h"
 #include "../../utils/generalUtils.h"
-#include "../../hitsMisses/HitsMissesInfo.h"
+#include "../utils/HitsMissesInfo.h"
 
 class GrowingWindowModelBuilder : public AbstractModelBuilder {
 
