@@ -2,8 +2,11 @@
 #define SRC_MODELSERIALIZERHANDLER_H
 
 #include <string>
+
 #include "../utils/ModelType.h"
 #include "../abstract/AbstractModelSerializer.h"
+#include "../implementation/SequentialModelSerializer.h"
+#include "../implementation/ProbabilisticModelSerializer.h"
 
 class ModelSerializerHandler {
 

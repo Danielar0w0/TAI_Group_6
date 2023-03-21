@@ -10,8 +10,6 @@
 #include "model_builder/implementation/FixedWindowModelBuilder.h"
 #include "model_builder/implementation/GrowingWindowModelBuilder.h"
 
-// Threshold for the copy model
-#define THRESHOLD 0.4
 
 FileInfo getFileInfo(const CopyModelInputArguments& inputArguments);
 FileReader getFileReaderInstance(const CopyModelInputArguments& inputArguments);
@@ -58,7 +56,7 @@ void runModelBuilder(const CopyModelInputArguments& inputArguments, const FileIn
     if (inputArguments.getModelBuilderType() == 1) {
 
         GrowingWindowModelBuilder growingWindowModelBuilder = GrowingWindowModelBuilder(fileReader, fileInfo);
-        growingWindowModelBuilder.buildModel(inputArguments.getAlpha(), 0.4);
+        growingWindowModelBuilder.buildModel(inputArguments.getAlpha(), inputArguments.getThreshold());
 
         SequentialModelSerializer sequentialModelSerializer = SequentialModelSerializer(inputArguments.getOutputModelPath());
         sequentialModelSerializer.setModel(growingWindowModelBuilder.getModel());
@@ -67,11 +65,10 @@ void runModelBuilder(const CopyModelInputArguments& inputArguments, const FileIn
         printInformationForCharacters(growingWindowModelBuilder.calculateInformationByCharacter());
         std::cout << "Total Amount of Information: " << growingWindowModelBuilder.calculateTotalInformation() << std::endl;
 
-
     } else if (inputArguments.getModelBuilderType() == 2) {
 
         FixedWindowModelBuilder fixedWindowModelBuilder = FixedWindowModelBuilder(fileReader, fileInfo);
-        fixedWindowModelBuilder.buildModel(inputArguments.getAlpha(), 0.4);
+        fixedWindowModelBuilder.buildModel(inputArguments.getAlpha(), inputArguments.getThreshold());
 
         ProbabilisticModelSerializer probabilisticModelSerializer = ProbabilisticModelSerializer(inputArguments.getOutputModelPath());
         probabilisticModelSerializer.setModel(fixedWindowModelBuilder.getModel());

@@ -105,8 +105,8 @@ void GrowingWindowModelBuilder::buildModel(double alpha, double threshold) {
             pastSequencesPositions.insert(std::pair<std::string, std::vector<int>>(sequenceAsString, {fileReader.getCurrentPosition()}));
         }
 
-        printf("Progress: %f\r", std::round(fileReader.getCurrentPosition()*100/fileInfo.getSize()));
-        fflush(stdout);
+        std::printf("Progress (Growing Window Model): %d%%\r", getProgress());
+        std::fflush(stdout);
 
     }
 
@@ -126,7 +126,7 @@ std::map<char, double> GrowingWindowModelBuilder::calculateInformationByCharacte
 
         double average = probabilitiesSum/probabilitiesCount;
 
-        informationByCharacter[character] = average;
+        informationByCharacter[character] = -std::log2(average);
 
     }
 

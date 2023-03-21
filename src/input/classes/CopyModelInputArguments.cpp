@@ -18,6 +18,10 @@ int CopyModelInputArguments::getK() const {
     return this->k;
 }
 
+double CopyModelInputArguments::getThreshold() const {
+    return this->threshold;
+}
+
 std::string CopyModelInputArguments::getInputFilePath() const {
     return this->inputFilePath;
 }
@@ -49,6 +53,11 @@ bool CopyModelInputArguments::checkArguments() const {
         return false;
     }
 
+    if (this->threshold <= 0 || this->threshold > 1) {
+        std::cerr << "[!!!] The threshold should be a value in the interval ]0, 1]." << std::endl;
+        return false;
+    }
+
     return true;
 
 }
@@ -58,9 +67,10 @@ void CopyModelInputArguments::printUsage() {
     std::cout << "Options:" << std::endl;
     std::cout << "-a \t Alpha" << std::endl;
     std::cout << "-k \t Window size" << std::endl;
+    std::cout << "-t \t Threshold" << std::endl;
     std::cout << "-i \t File with target sequence" << std::endl;
     std::cout << "-o \t File to save the model" << std::endl;
-    std::cout << "-t \t Model builder type" << std::endl;
+    std::cout << "-m \t Model builder type" << std::endl;
 }
 
 std::string CopyModelInputArguments::getOutputModelPath() const {
@@ -81,6 +91,7 @@ void CopyModelInputArguments::parseArguments(int argc, char **argv) {
 
         int parsedK = 0;
         double parsedAlpha = 0;
+        double parsedThreshold = 0;
         std::string parsedInputFilePath;
         std::string parsedOutputModelFilePath;
         int parsedModelBuilderType = -1;
@@ -99,9 +110,12 @@ void CopyModelInputArguments::parseArguments(int argc, char **argv) {
                 parsedInputFilePath = argv[i + 1];
             } else if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0) {
                 parsedOutputModelFilePath = argv[i + 1];
-            } else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--type") == 0) {
+            } else if (strcmp(argv[i], "-m") == 0 || strcmp(argv[i], "--model") == 0) {
                 if (isNumber(argv[i + 1]))
                     parsedModelBuilderType = atoi(argv[i + 1]);
+            } else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--threshold") == 0) {
+                if (isNumber(argv[i + 1]))
+                    parsedThreshold = atof(argv[i + 1]);
             }
         }
 
@@ -115,6 +129,11 @@ void CopyModelInputArguments::parseArguments(int argc, char **argv) {
             parsedK = 3;
         }
 
+        if (parsedThreshold == 0) {
+            std::cout << "Threshold was not provided. Using default value: 0.4" << std::endl;
+            parsedThreshold = 0.4;
+        }
+
         if (parsedModelBuilderType == -1) {
             std::cout << "Model builder type was not provided. Using default value: 1" << std::endl;
             parsedModelBuilderType = 1;
@@ -122,6 +141,7 @@ void CopyModelInputArguments::parseArguments(int argc, char **argv) {
 
         this->alpha = parsedAlpha;
         this->k = parsedK;
+        this->threshold = parsedThreshold;
         this->inputFilePath = std::move(parsedInputFilePath);
         this->outputModelPath = std::move(parsedOutputModelFilePath);
         this->modelBuilderType = parsedModelBuilderType;

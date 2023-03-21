@@ -10,6 +10,7 @@ class CopyModelInputArguments {
 
     double alpha{};
     int k{};
+    double threshold{};
     std::string inputFilePath;
     std::string outputModelPath;
     int modelBuilderType{};
@@ -21,6 +22,7 @@ class CopyModelInputArguments {
 
         [[nodiscard]] double getAlpha() const;
         [[nodiscard]] int getK() const;
+        [[nodiscard]] double getThreshold() const;
         [[nodiscard]] std::string getInputFilePath() const;
         [[nodiscard]] std::string getOutputModelPath() const;
         [[nodiscard]] int getModelBuilderType() const;
