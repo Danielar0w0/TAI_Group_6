@@ -2,28 +2,30 @@
 #define SRC_COPYMODELINPUTARGUMENTS_H
 
 #include <string>
-using namespace std;
+#include <iostream>
 
-// Smoothing parameter for estimating the probabilities
-// int ALPHA = 2;
-
-// Window size
-// int K = 11;
+#include "../../utils/generalUtils.h"
 
 class CopyModelInputArguments {
 
-    double alpha;
-    int k;
-    string filePath;
+    double alpha{};
+    int k{};
+    std::string inputFilePath;
+    std::string outputModelPath;
+    int modelBuilderType{};
 
     public:
 
-        CopyModelInputArguments(string filePath, double alpha, int k);
+        CopyModelInputArguments();
+        CopyModelInputArguments(std::string inputFilePath, std::string outputFilePath, double alpha, int k, int modelBuilderType);
 
         [[nodiscard]] double getAlpha() const;
         [[nodiscard]] int getK() const;
-        [[nodiscard]] string getFilePath() const;
+        [[nodiscard]] std::string getInputFilePath() const;
+        [[nodiscard]] std::string getOutputModelPath() const;
+        [[nodiscard]] int getModelBuilderType() const;
 
+        void parseArguments(int argc, char *argv[]);
         // Don't add nodiscard - I may want to check the arguments and do nothing with the return value.
         bool checkArguments() const;
 
@@ -32,4 +34,4 @@ class CopyModelInputArguments {
 };
 
 
-#endif //SRC_COPYMODELINPUTARGUMENTS_H
+#endif

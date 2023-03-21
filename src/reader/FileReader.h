@@ -1,7 +1,3 @@
-//
-// Created by hugo on 05-03-2023.
-//
-
 #ifndef SRC_FILEREADER_H
 #define SRC_FILEREADER_H
 

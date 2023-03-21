@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     cout << "Model File Path: " << generatorInputArguments.getModelPath() << endl;
     cout << "Amount of Characters to Generate: " << generatorInputArguments.getAmountOfCharactersToGenerate() << endl;
 
-    ModelType modelType = ModelSerializerHandler::getModelType("/Users/hugogoncalves/Documents/Faculdade/Mestrado/Semestre_2/TAI/TAI_Group_6/output.txt");
+    ModelType modelType = ModelSerializerHandler::getModelType(generatorInputArguments.getModelPath());
 
     if (modelType == ModelType::SEQUENTIAL) {
 

@@ -3,353 +3,96 @@
 
 #include "utils/printUtils.h"
 #include "input/classes/CopyModelInputArguments.h"
-#include "input/InputUtils.h"
 #include "reader/FileReader.h"
 #include "hitsMisses/HitsMissesInfo.h"
 #include "model_serialization/implementation/ProbabilisticModelSerializer.h"
-#include "reader/SequentialFileReader.h"
 #include "model_serialization/implementation/SequentialModelSerializer.h"
+#include "model_builder/implementation/FixedWindowModelBuilder.h"
+#include "model_builder/implementation/GrowingWindowModelBuilder.h"
 
 // Threshold for the copy model
-#define THRESHOLD 0.45
+#define THRESHOLD 0.4
 
-using namespace std;
-
-// Develop a program, named cpm, that implements a copy model.
-// All required parameters to control the model must be passed as command line arguments.
-
-// One major advantage here is the ability to adjust the probabilistic model as the encoding proceeds,
-// in response to the changing probability distribution from one encoded symbol to the next.
-
-void analyseFileSequenceWithFixedWindow(FileReader fileReader, FileInfo fileInfo, double alpha);
-void analyseFileSequenceWithGrowingWindow(FileReader fileReader, FileInfo fileInfo, double alpha);
 FileInfo getFileInfo(const CopyModelInputArguments& inputArguments);
 FileReader getFileReaderInstance(const CopyModelInputArguments& inputArguments);
-
+void runModelBuilder(const CopyModelInputArguments& inputArguments, const FileInfo& fileInfo, const FileReader& fileReader);
+void printInformationForCharacters(const std::map<char, double>& informationForCharacters);
 
 int main(int argc, char *argv[]) {
 
     // Read command line arguments
-    CopyModelInputArguments inputArguments = getCopyModelInputArguments(argc, argv);
+    CopyModelInputArguments inputArguments = CopyModelInputArguments();
+    inputArguments.parseArguments(argc, argv);
 
     bool areArgumentsValid = inputArguments.checkArguments();
 
-    if (!areArgumentsValid)
+    if (!areArgumentsValid) {
+        CopyModelInputArguments::printUsage();
         std::exit(EXIT_FAILURE);
+    }
+
 
     // First Pass: Get File Info. (Alphabet and size)
     FileInfo fileInfo = getFileInfo(inputArguments);
 
-    // TODO: Remove this print
-    printAlphabet(fileInfo.getAlphabet());
-
-    cout << endl;
-
     // Get File Reader instance for second pass
     FileReader fileReader = getFileReaderInstance(inputArguments);
 
-    analyseFileSequenceWithFixedWindow(fileReader, fileInfo, inputArguments.getAlpha());
+    if (inputArguments.getModelBuilderType() == 1) {
+        std::cout << "Running Growing Window Model Builder..." << std::endl;
+    } else if (inputArguments.getModelBuilderType() == 2) {
+        std::cout << "Running Fixed Window Model Builder..." << std::endl;
+    } else {
+        std::cout << "Invalid Model Builder Type. Exiting..." << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+
+    runModelBuilder(inputArguments, fileInfo, fileReader);
+
+    return 0;
 
 }
 
-void analyseFileSequenceWithFixedWindow(FileReader fileReader, FileInfo fileInfo, double alpha) {
+void runModelBuilder(const CopyModelInputArguments& inputArguments, const FileInfo& fileInfo, const FileReader& fileReader) {
 
-    std::map<string, vector<int>> pastSequencesPositions;
-    std::map<string, int> sequenceCurrentPointer;
-    std::map<string, int> sequenceCurrentPointerIndex;
+    if (inputArguments.getModelBuilderType() == 1) {
 
-    // Todo: We may only need to store the hits and misses for the character we are currently predicting
-    std::map<string, std::pair<char, HitsMissesInfo>> hitsAndMissesForEachSequence;
+        GrowingWindowModelBuilder growingWindowModelBuilder = GrowingWindowModelBuilder(fileReader, fileInfo);
+        growingWindowModelBuilder.buildModel(inputArguments.getAlpha(), 0.4);
 
-    std::map<string, std::map<char, double>> sequenceSymbolProbabilities;
+        SequentialModelSerializer sequentialModelSerializer = SequentialModelSerializer(inputArguments.getOutputModelPath());
+        sequentialModelSerializer.setModel(growingWindowModelBuilder.getModel());
+        sequentialModelSerializer.outputModel();
 
-    // Temporary variables to calculate the average of probabilities for each sequence + symbol
-    std::map<string, std::map<char, double>> sequenceSymbolProbabilitiesSum;
-    std::map<string, int> sequenceSymbolProbabilitiesCount;
+        printInformationForCharacters(growingWindowModelBuilder.calculateInformationByCharacter());
+        std::cout << "Total Amount of Information: " << growingWindowModelBuilder.calculateTotalInformation() << std::endl;
 
-    std::map<char, double> probabilitiesByCharacter;
 
-    fileReader.openFile();
+    } else if (inputArguments.getModelBuilderType() == 2) {
 
-    int predictionsCount = 0;
+        FixedWindowModelBuilder fixedWindowModelBuilder = FixedWindowModelBuilder(fileReader, fileInfo);
+        fixedWindowModelBuilder.buildModel(inputArguments.getAlpha(), 0.4);
 
-    while (fileReader.next()) {
+        ProbabilisticModelSerializer probabilisticModelSerializer = ProbabilisticModelSerializer(inputArguments.getOutputModelPath());
+        probabilisticModelSerializer.setModel(fixedWindowModelBuilder.getModel());
+        probabilisticModelSerializer.outputModel();
 
-        string sequenceAsString = convertCharArrayToString(fileReader.getWindowContent(), fileReader.getWindowSize());
-
-        // Let's try to predict
-
-        if (pastSequencesPositions.count(sequenceAsString) > 0) { // We can predict because we have already seen it
-
-            // Have we already selected a pointer for this sequence??
-
-            if (sequenceCurrentPointer.count(sequenceAsString) <= 0) { // We have not selected a pointer for the current sequence. Select one (the first one)!!
-                sequenceCurrentPointer[sequenceAsString] = pastSequencesPositions[sequenceAsString].rbegin()[0];
-                sequenceCurrentPointerIndex[sequenceAsString] = 0;
-            }
-
-            // Now we have selected a pointer for this sequence for sure.
-            int currentPointerForCurrentSequence = sequenceCurrentPointer[sequenceAsString];
-
-            // Which character are we predicting that will come next?
-            char predictedCharacter = fileReader.getCache()->operator[](currentPointerForCurrentSequence);
-
-            // Which character was indeed next?
-            char futureCharacter = fileReader.getNextCharacterInSequence();
-
-            HitsMissesInfo hitsMissesInfo = HitsMissesInfo();
-
-            if (hitsAndMissesForEachSequence.count(sequenceAsString) > 0 && hitsAndMissesForEachSequence[sequenceAsString].first == predictedCharacter) {
-                hitsMissesInfo = hitsAndMissesForEachSequence[sequenceAsString].second;
-            }
-
-            if (predictedCharacter == futureCharacter) { // Then we have a hit! :)
-                hitsMissesInfo.incrementHits(); // Add one Hit
-            } else {
-                hitsMissesInfo.incrementMisses(); // Add one miss
-            }
-
-            // hitsAndMissesForEachSequence[sequenceAsString].second = hitsMissesInfo; // Re-assign it
-            hitsAndMissesForEachSequence[sequenceAsString] = std::make_pair(predictedCharacter, hitsMissesInfo);
-
-            // Now, we will calculate the probability for our predicted character
-
-            unsigned int hitsForPredictedCharacter = hitsAndMissesForEachSequence[sequenceAsString].second.getHits();
-            unsigned int missesForPredictedCharacter = hitsAndMissesForEachSequence[sequenceAsString].second.getMisses();
-            double probabilityForPredictedCharacter = calculateHitProbability(hitsForPredictedCharacter, missesForPredictedCharacter, alpha);
-
-            // If our probability is below our threshold we need to change the pointer for our sequence because the current pointer is bad!
-            // HOWEVER, we can only change pointer in we have another pointer to change to (check if size is greater than 1).
-            if (probabilityForPredictedCharacter < THRESHOLD && pastSequencesPositions[sequenceAsString].size() > 1) {
-
-                // Change the pointer to another one
-                int nextPointerIndex = ++sequenceCurrentPointerIndex[sequenceAsString];
-                sequenceCurrentPointer[sequenceAsString] = pastSequencesPositions[sequenceAsString].rbegin()[nextPointerIndex];
-
-                // Clean hits and misses for this sequence and this prediction
-                hitsAndMissesForEachSequence[sequenceAsString] = std::make_pair(predictedCharacter, HitsMissesInfo());
-
-            }
-
-            // Regardless, we need to update the amount of information for each character in our alphabet.
-            probabilitiesByCharacter[predictedCharacter] += probabilityForPredictedCharacter;
-
-            // Keep track of symbol probabilities for current sequence
-            sequenceSymbolProbabilitiesSum[sequenceAsString][predictedCharacter] += probabilityForPredictedCharacter;
-
-            ++predictionsCount;
-
-            // Here we do a uniform distribution of probabilities across the different characters of the alphabet
-            double probabilityDistribution = (1-probabilityForPredictedCharacter)/(int)(fileInfo.getAlphabet().size()-1);
-
-            // And assign the calculated probability to each one of the characters
-            for (char characterInAlphabet : fileInfo.getAlphabet()) {
-
-                if (characterInAlphabet != predictedCharacter) {
-                    probabilitiesByCharacter[characterInAlphabet] += probabilityDistribution;
-
-                    // Keep track of symbol probabilities for current sequence
-                    sequenceSymbolProbabilitiesSum[sequenceAsString][characterInAlphabet] += probabilityDistribution;
-                }
-            }
-
-            // Update count to later calculate average of probabilities
-            sequenceSymbolProbabilitiesCount[sequenceAsString]++;
-
-        }
-
-        // Independently of predicting or not something, we will want to store this sequence and the position after the sequence
-
-        if (pastSequencesPositions.count(sequenceAsString) <= 0) { // If we have never seen this sequence, add it as key and a vector with the position
-            pastSequencesPositions.insert(pair<string,vector<int>>(sequenceAsString, {fileReader.getCurrentPosition()}));
-        } else { // If we saw it, just add this new position
-            pastSequencesPositions[sequenceAsString].push_back(fileReader.getCurrentPosition());
-        }
-
-        printf("Progress: %f\r", std::round(fileReader.getCurrentPosition()*100/fileInfo.getSize()));
-        fflush(stdout);
+        printInformationForCharacters(fixedWindowModelBuilder.calculateInformationByCharacter());
+        std::cout << "Total Amount of Information: " << fixedWindowModelBuilder.calculateTotalInformation() << std::endl;
 
     }
-
-
-    //  Calculate probabilities for the model to be used in the generator
-    for (const auto& i: sequenceSymbolProbabilitiesSum) {
-        string sequence = i.first;
-        for (auto j: i.second) {
-            char c = j.first; double prob = j.second;
-
-            // Update final average of probabilities for sequence + symbol
-            int count = sequenceSymbolProbabilitiesCount[sequence];
-            sequenceSymbolProbabilities[sequence][c] = prob/count;
-        }
-    }
-
-    map<char, int> symbolsCount = fileInfo.getSymbolsCount();
-    for (auto i: symbolsCount) {
-        cout << i.first << " : " << i.second << endl;
-    }
-    cout << endl;
-
-    for (auto i : probabilitiesByCharacter) {
-        // cout << i.first << " : " << i.second/predictionsCount << endl;
-        cout << i.first << " : " << -log2(i.second / predictionsCount) << endl;
-    }
-
-    double totalInformation = 0; char c; int count;
-    for (auto i: symbolsCount) {
-        c = i.first; count = i.second;
-        totalInformation += count * -log2(probabilitiesByCharacter[c] / predictionsCount);
-    }
-
-    ProbabilisticModelSerializer probabilisticModelSerializer = ProbabilisticModelSerializer("output.txt");
-
-    probabilisticModelSerializer.setModel(sequenceSymbolProbabilities);
-    probabilisticModelSerializer.outputModel();
-
-    cout << endl;
-    cout << "Total Information: " << totalInformation << endl;
-
-    fileReader.closeFile();
 
 }
 
-void analyseFileSequenceWithGrowingWindow(FileReader fileReader, FileInfo fileInfo, double alpha) {
-
-    std::map<string, vector<int>> pastSequencesPositions;
-    std::map<string, int> currentPointerIndexForSequence;
-    std::map<char, double> probabilitiesForCharacter;
-    std::map<char, int> characterProbabilitiesCount;
-    std::map<string, string> bestCopyForWindow;
-
-    double totalAmountOfInformation = 0;
-
-    fileReader.openFile();
-
-    // Read a window
-    while (fileReader.next()) {
-
-        // Get Window sequence as string
-        string sequenceAsString = convertCharArrayToString(fileReader.getWindowContent(), fileReader.getWindowSize());
-
-        // We have seen this sequence in the past
-        if (pastSequencesPositions.count(sequenceAsString) > 0) {
-
-            int currentPointerIndex;
-
-            // If I haven't chosen a pointer for this sequence yet, chose the first pointer
-            if (currentPointerIndexForSequence.count(sequenceAsString) <= 0) {
-                currentPointerIndex = 0;
-                currentPointerIndexForSequence.insert(std::make_pair(sequenceAsString, currentPointerIndex));
-            } else {
-                currentPointerIndex = currentPointerIndexForSequence[sequenceAsString];
-            }
-
-            int pastSequencePosition = pastSequencesPositions[sequenceAsString].rbegin()[currentPointerIndex];
-
-            // The probability P (probability of the character I'm seeing now being the correct one accordingly to
-            // the current copy model)
-            double probabilityOfCorrectPrediction;
-
-            // Hits and misses info for the current copy model
-            HitsMissesInfo hitsMissesInfo;
-
-            // Expand window until we reach the end of the file of the probability reaches a certain threshold
-            do {
-
-                char predictedChar = fileReader.getCache()->operator[](pastSequencePosition);
-                char nextCharacterInSequence = fileReader.getNextCharacterInSequence();
-
-                // Calculate the probability P
-                probabilityOfCorrectPrediction = calculateHitProbability(hitsMissesInfo.getHits(),
-                                                                         hitsMissesInfo.getMisses(), alpha);
-
-                // Save this probability for the next character in the sequence
-                //
-                // Remainder: the probability P is the probability of the character I'm seeing now being the correct one
-                // accordingly to the current copy model
-                probabilitiesForCharacter[nextCharacterInSequence] += probabilityOfCorrectPrediction;
-                characterProbabilitiesCount[nextCharacterInSequence]++;
-
-                double probDistribution = (1-probabilityOfCorrectPrediction)/ (double) (fileInfo.getAlphabet().size() - 1);
-
-                // And assign the calculated probability to each one of the characters
-                for (char characterInAlphabet : fileInfo.getAlphabet()) {
-                    if (characterInAlphabet != nextCharacterInSequence) {
-                        probabilitiesForCharacter[characterInAlphabet] += probDistribution;
-                        characterProbabilitiesCount[characterInAlphabet]++;
-                    }
-                }
-
-                // Calculate the total amount of information
-                totalAmountOfInformation += -std::log2(probabilityOfCorrectPrediction);
-
-                // If it turns out the next character in the copy model to be equal to the next character in the
-                // sequence then we have a hit.
-                if (predictedChar == nextCharacterInSequence) {
-                    hitsMissesInfo.incrementHits();
-                } else { // Otherwise, next character in sequence != of character in copy model, we have a miss
-                    hitsMissesInfo.incrementMisses();
-                }
-
-            } while (probabilityOfCorrectPrediction > THRESHOLD && fileReader.nextCharacter());
-
-            // When we leave the loop we are stopping the copy model!
-            string correspondingWindow = convertCharVectorToString(*fileReader.getCurrentSequence()).substr(0, fileReader.getWindowSize());
-            std::vector<char> currentSequenceVector(fileReader.getCurrentSequence()->size());
-
-            std::copy(fileReader.getCurrentSequence()->begin(), fileReader.getCurrentSequence()->end(), currentSequenceVector.begin());
-
-            if (bestCopyForWindow.count(correspondingWindow) <= 0) {
-                bestCopyForWindow.insert(std::make_pair(correspondingWindow, convertCharVectorToString(currentSequenceVector)));
-            } else if (bestCopyForWindow[correspondingWindow].size() < currentSequenceVector.size()) {
-                bestCopyForWindow[correspondingWindow] = convertCharVectorToString(currentSequenceVector);
-            }
-
-            // We are stopping this copy model because we reached the threshold
-            if (probabilityOfCorrectPrediction <= THRESHOLD && pastSequencesPositions[sequenceAsString].size() > 1) {
-                // Change the pointer to the next one
-                ++currentPointerIndexForSequence[sequenceAsString];
-            }
-
-            // If we saw this sequence before, just add this new position
-            pastSequencesPositions[sequenceAsString].push_back(fileReader.getCurrentPosition());
-
-        } else {
-            // If we have never seen this sequence, add it as key and a vector with the position
-            pastSequencesPositions.insert(pair<string,vector<int>>(sequenceAsString, {fileReader.getCurrentPosition()}));
-        }
-
-        printf("Progress: %f\r", std::round(fileReader.getCurrentPosition()*100/fileInfo.getSize()));
-        fflush(stdout);
-
+void printInformationForCharacters(const std::map<char, double>& informationForCharacters) {
+    for (auto const& [key, value] : informationForCharacters) {
+        std::cout << key << " " << value << std::endl;
     }
-
-    fileReader.closeFile();
-
-    for (const auto& i : probabilitiesForCharacter) {
-
-        char character = i.first;
-        double probabilitiesSum = i.second;
-        double probabilitiesCount = characterProbabilitiesCount[character];
-
-        double average = probabilitiesSum/probabilitiesCount;
-
-        cout << "Information for " << character << " is " << -std::log2(average) << endl;
-
-    }
-
-    SequentialModelSerializer sequentialModelSerializer = SequentialModelSerializer("output.txt");
-
-    sequentialModelSerializer.setModel(bestCopyForWindow);
-    sequentialModelSerializer.outputModel();
-
-    cout << "Total Amount of Information: " << totalAmountOfInformation << endl;
-
 }
 
 FileInfo getFileInfo(const CopyModelInputArguments& inputArguments) {
 
-    FileReader fileReader = FileReader(inputArguments.getFilePath(), inputArguments.getK());
+    FileReader fileReader = getFileReaderInstance(inputArguments);
 
     fileReader.openFile();
     FileInfo fileInfo = fileReader.getFileInfo();
@@ -359,7 +102,7 @@ FileInfo getFileInfo(const CopyModelInputArguments& inputArguments) {
 }
 
 FileReader getFileReaderInstance(const CopyModelInputArguments& inputArguments) {
-    return FileReader(inputArguments.getFilePath(), inputArguments.getK());
+    return FileReader(inputArguments.getInputFilePath(), inputArguments.getK());
 }
 
 
