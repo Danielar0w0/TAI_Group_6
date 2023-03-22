@@ -1,3 +1,4 @@
+#include <iostream>
 #include "GrowingWindowModelBuilder.h"
 
 GrowingWindowModelBuilder::GrowingWindowModelBuilder(const FileReader &fileReader, const FileInfo &fileInfo) : AbstractModelBuilder(fileReader, fileInfo) {}
@@ -27,11 +28,10 @@ void GrowingWindowModelBuilder::buildModel(double alpha, double threshold) {
                 currentPointerIndex = currentPointerIndexForSequence[sequenceAsString];
             }
 
-
             // If we saw this sequence before, just add this new position
             pastSequencesPositions[sequenceAsString].push_back(fileReader.getCurrentPosition());
 
-            int pastSequencePosition = pastSequencesPositions[sequenceAsString].rbegin()[currentPointerIndex];
+            int pastSequencePosition = pastSequencesPositions[sequenceAsString][currentPointerIndex];
 
             // The probability P (probability of the character I'm seeing now being the correct one accordingly to
             // the current copy model)
@@ -43,7 +43,8 @@ void GrowingWindowModelBuilder::buildModel(double alpha, double threshold) {
             // Expand window until we reach the end of the file of the probability reaches a certain threshold
             do {
 
-                char predictedChar = fileReader.getCache()->operator[](pastSequencePosition);
+                int pastSequenceOffset = (int) fileReader.getCurrentSequence()->size()-fileReader.getWindowSize()-1;
+                char predictedChar = fileReader.getCache()->operator[](pastSequencePosition+pastSequenceOffset);
                 char nextCharacterInSequence = fileReader.getNextCharacterInSequence();
 
                 // Calculate the probability P
@@ -79,7 +80,7 @@ void GrowingWindowModelBuilder::buildModel(double alpha, double threshold) {
                     hitsMissesInfo.incrementMisses();
                 }
 
-            } while (probabilityOfCorrectPrediction > threshold && fileReader.nextCharacter());
+            } while (probabilityOfCorrectPrediction >= threshold && fileReader.nextCharacter());
 
             // When we leave the loop we are stopping the copy model!
             std::string correspondingWindow = convertCharVectorToString(*fileReader.getCurrentSequence()).substr(0, fileReader.getWindowSize());
@@ -94,11 +95,10 @@ void GrowingWindowModelBuilder::buildModel(double alpha, double threshold) {
             }
 
             // We are stopping this copy model because we reached the threshold
-            if (probabilityOfCorrectPrediction <= threshold && pastSequencesPositions[sequenceAsString].size() > 1) {
+            if (probabilityOfCorrectPrediction < threshold && pastSequencesPositions[sequenceAsString].size() > 1) {
                 // Change the pointer to the next one
                 ++currentPointerIndexForSequence[sequenceAsString];
             }
-
 
         } else {
             // If we have never seen this sequence, add it as key and a vector with the position
