@@ -1,3 +1,4 @@
+#include <iostream>
 #include "GrowingWindowModelBuilder.h"
 
 GrowingWindowModelBuilder::GrowingWindowModelBuilder(const FileReader &fileReader, const FileInfo &fileInfo) : AbstractModelBuilder(fileReader, fileInfo) {}
@@ -79,13 +80,19 @@ void GrowingWindowModelBuilder::buildModel(double alpha, double threshold) {
                     hitsMissesInfo.incrementMisses();
                 }
 
-            } while (probabilityOfCorrectPrediction > threshold && fileReader.nextCharacter());
+            } while (probabilityOfCorrectPrediction >= threshold && fileReader.nextCharacter());
 
             // When we leave the loop we are stopping the copy model!
             std::string correspondingWindow = convertCharVectorToString(*fileReader.getCurrentSequence()).substr(0, fileReader.getWindowSize());
             std::vector<char> currentSequenceVector(fileReader.getCurrentSequence()->size());
 
+
+
             std::copy(fileReader.getCurrentSequence()->begin(), fileReader.getCurrentSequence()->end(), currentSequenceVector.begin());
+
+            std::string currentSequence = convertCharVectorToString(currentSequenceVector);
+
+            std::cout << "Current sequence: " << currentSequence << std::endl;
 
             if (bestCopyForWindow.count(correspondingWindow) <= 0) {
                 bestCopyForWindow.insert(std::make_pair(correspondingWindow, convertCharVectorToString(currentSequenceVector)));
@@ -94,7 +101,7 @@ void GrowingWindowModelBuilder::buildModel(double alpha, double threshold) {
             }
 
             // We are stopping this copy model because we reached the threshold
-            if (probabilityOfCorrectPrediction <= threshold && pastSequencesPositions[sequenceAsString].size() > 1) {
+            if (probabilityOfCorrectPrediction < threshold && pastSequencesPositions[sequenceAsString].size() > 1) {
                 // Change the pointer to the next one
                 ++currentPointerIndexForSequence[sequenceAsString];
             }
