@@ -112,9 +112,8 @@ std::map<std::string, std::map<char, double>> FixedWindowModelBuilder::getModel(
     for (const auto& i: sequenceSymbolProbabilitiesSum) {
         std::string sequence = i.first;
         for (auto j: i.second) {
+
             char c = j.first; double prob = j.second;
-
-
 
             // Update final average of probabilities for sequence + symbol
             int count = sequenceSymbolProbabilitiesCount[sequence];
@@ -123,6 +122,7 @@ std::map<std::string, std::map<char, double>> FixedWindowModelBuilder::getModel(
             std::cout << count << std::endl;
 
             sequenceSymbolProbabilities[sequence][c] = prob/count;
+
         }
     }
 
@@ -144,15 +144,16 @@ double FixedWindowModelBuilder::calculateTotalInformation() {
 
 }
 
-std::map<char, double> FixedWindowModelBuilder::calculateInformationByCharacter() {
+double FixedWindowModelBuilder::calculateInformationByCharacter() {
 
-    std::map<char, double> informationByCharacter;
+//    std::map<char, double> informationByCharacter;
+//
+//    for (auto i : probabilitiesByCharacter) {
+//        informationByCharacter[i.first] = -log2(i.second / totalAmountOfPredictions);
+//    }
 
-    for (auto i : probabilitiesByCharacter) {
-        informationByCharacter[i.first] = -log2(i.second / totalAmountOfPredictions);
-    }
+    return 0;
 
-    return informationByCharacter;
 }
 
 FixedWindowModelBuilder::FixedWindowModelBuilder(const FileReader &fileReader, const FileInfo &fileInfo)

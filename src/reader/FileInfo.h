@@ -16,6 +16,7 @@ class FileInfo {
 
         std::set<char> getAlphabet();
         std::map<char, int> getSymbolsCount();
+        std::map<char, double> getSymbolsDistribution();
         [[nodiscard]] int getSize() const;
 
 };

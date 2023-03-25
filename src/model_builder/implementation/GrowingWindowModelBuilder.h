@@ -11,9 +11,9 @@ class GrowingWindowModelBuilder : public AbstractModelBuilder {
 
     std::map<std::string, std::vector<int>> pastSequencesPositions;
     std::map<std::string, int> currentPointerIndexForSequence;
-    std::map<char, double> probabilitiesForCharacter;
-    std::map<char, int> characterProbabilitiesCount;
     std::map<std::string, std::string> bestCopyForWindow;
+
+    double totalAmountOfInformation = 0;
 
 public:
 
@@ -23,7 +23,7 @@ public:
 
     void buildModel(double alpha, double threshold) override;
 
-    std::map<char, double> calculateInformationByCharacter() override;
+    double calculateInformationByCharacter() override;
 
     double calculateTotalInformation() override;
 

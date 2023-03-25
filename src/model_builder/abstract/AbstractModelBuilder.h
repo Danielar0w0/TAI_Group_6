@@ -11,6 +11,7 @@ class AbstractModelBuilder {
 protected:
     FileReader fileReader;
     FileInfo fileInfo;
+    std::map<char, double> symbolsDistribution;
 
     int getProgress();
 
@@ -20,8 +21,10 @@ public:
     virtual ~AbstractModelBuilder();
 
     virtual void buildModel(double alpha, double threshold) = 0;
-    virtual std::map<char, double> calculateInformationByCharacter() = 0;
+    virtual double calculateInformationByCharacter() = 0;
     virtual double calculateTotalInformation() = 0;
+
+    virtual double getProbabilityDistributionForCharacter(char character, double complementaryProbability);
 
 };
 

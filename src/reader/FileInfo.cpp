@@ -16,6 +16,17 @@ std::map<char, int> FileInfo::getSymbolsCount() {
     return this->symbolsCount;
 }
 
+std::map<char, double> FileInfo::getSymbolsDistribution() {
+
+    std::map<char, double> symbolsDistribution;
+
+    for (auto &symbol : this->symbolsCount)
+        symbolsDistribution[symbol.first] = (double) symbol.second / this->size;
+
+    return symbolsDistribution;
+
+}
+
 int FileInfo::getSize() const {
     return this->size;
 }

@@ -34,7 +34,7 @@ public:
 
 
     void buildModel(double alpha, double threshold) override;
-    std::map<char, double> calculateInformationByCharacter() override;
+    double calculateInformationByCharacter() override;
     double calculateTotalInformation() override;
 
     std::map<std::string, std::map<char, double>> getModel();

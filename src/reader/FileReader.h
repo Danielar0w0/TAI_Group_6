@@ -13,6 +13,7 @@ class FileReader {
     FILE* targetFile{};
     int currentPosition;
     char* currentWindow;
+    char* lastWindow;
     std::vector<char> currentSequence;
     char nextCharacterInSequence{};
 
@@ -31,6 +32,8 @@ class FileReader {
         FileInfo getFileInfo();
 
         char* getWindowContent();
+        char* getLastWindowContent();
+
         std::vector<char>* getCurrentSequence();
         std::vector<char>* getCache();
 

@@ -33,6 +33,8 @@ int main(int argc, char *argv[]) {
     // First Pass: Get File Info. (Alphabet and size)
     FileInfo fileInfo = getFileInfo(inputArguments);
 
+    std::cout << "Alphabet: " << fileInfo.getSize() << std::endl;
+
     // Get File Reader instance for second pass
     FileReader fileReader = getFileReaderInstance(inputArguments);
 
@@ -62,7 +64,7 @@ void runModelBuilder(const CopyModelInputArguments& inputArguments, const FileIn
         sequentialModelSerializer.setModel(growingWindowModelBuilder.getModel());
         sequentialModelSerializer.outputModel();
 
-        printInformationForCharacters(growingWindowModelBuilder.calculateInformationByCharacter());
+        std::cout << "Information by Character: " << growingWindowModelBuilder.calculateInformationByCharacter() << std::endl;
         std::cout << "Total Amount of Information: " << growingWindowModelBuilder.calculateTotalInformation() << std::endl;
 
     } else if (inputArguments.getModelBuilderType() == 2) {
@@ -74,17 +76,11 @@ void runModelBuilder(const CopyModelInputArguments& inputArguments, const FileIn
         probabilisticModelSerializer.setModel(fixedWindowModelBuilder.getModel());
         probabilisticModelSerializer.outputModel();
 
-        printInformationForCharacters(fixedWindowModelBuilder.calculateInformationByCharacter());
+        std::cout << "Information by Character: " << fixedWindowModelBuilder.calculateInformationByCharacter() << std::endl;
         std::cout << "Total Amount of Information: " << fixedWindowModelBuilder.calculateTotalInformation() << std::endl;
 
     }
 
-}
-
-void printInformationForCharacters(const std::map<char, double>& informationForCharacters) {
-    for (auto const& [key, value] : informationForCharacters) {
-        std::cout << key << " " << value << std::endl;
-    }
 }
 
 FileInfo getFileInfo(const CopyModelInputArguments& inputArguments) {

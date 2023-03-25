@@ -10,6 +10,7 @@ FileReader::FileReader(std::string filePath, int windowSize) {
 
     this->currentPosition = 0;
     this->currentWindow = new char[windowSize];
+    this->lastWindow = new char[windowSize];
 
 }
 
@@ -58,6 +59,11 @@ bool FileReader::nextCharacter() {
     this->nextCharacterInSequence = character;
     this->cache.push_back(character);
     this->currentSequence.push_back(character);
+
+    // Update last Window
+    for (int i = 0; i < this->windowSize-1; ++i)
+        this->lastWindow[i] = this->lastWindow[i+1];
+    this->lastWindow[this->windowSize-1] = character;
 
     ++this->currentPosition;
 
@@ -156,4 +162,8 @@ std::vector<char>* FileReader::getCurrentSequence() {
 
 char* FileReader::getWindowContent() {
     return this->currentWindow;
+}
+
+char *FileReader::getLastWindowContent() {
+    return this->lastWindow;
 }
