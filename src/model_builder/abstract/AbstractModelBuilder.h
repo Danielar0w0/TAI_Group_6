@@ -5,19 +5,21 @@
 #include <cmath>
 
 #include "../../reader/FileReader.h"
+#include "../../debugging/Logger.h"
 
 class AbstractModelBuilder {
 
 protected:
     FileReader fileReader;
     FileInfo fileInfo;
+    Logger logger;
     std::map<char, double> symbolsDistribution;
 
     int getProgress();
 
 public:
 
-    AbstractModelBuilder(FileReader fileReader, FileInfo fileInfo);
+    AbstractModelBuilder(FileReader fileReader, FileInfo fileInfo, Logger logger);
     virtual ~AbstractModelBuilder();
 
     virtual void buildModel(double alpha, double threshold) = 0;

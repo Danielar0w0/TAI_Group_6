@@ -13,7 +13,8 @@
 
 FileInfo getFileInfo(const CopyModelInputArguments& inputArguments);
 FileReader getFileReaderInstance(const CopyModelInputArguments& inputArguments);
-void runModelBuilder(const CopyModelInputArguments& inputArguments, const FileInfo& fileInfo, const FileReader& fileReader);
+void runModelBuilder(const CopyModelInputArguments& inputArguments, const FileInfo& fileInfo,
+                     const FileReader& fileReader, Logger logger);
 void printInformationForCharacters(const std::map<char, double>& informationForCharacters);
 
 int main(int argc, char *argv[]) {
@@ -33,6 +34,10 @@ int main(int argc, char *argv[]) {
     // First Pass: Get File Info. (Alphabet and size)
     FileInfo fileInfo = getFileInfo(inputArguments);
 
+    // Initialize logger
+    Logger logger = Logger();
+    logger.setLevel(LoggingLevel::INFO);
+
     std::cout << "Alphabet: " << fileInfo.getSize() << std::endl;
 
     // Get File Reader instance for second pass
@@ -47,17 +52,18 @@ int main(int argc, char *argv[]) {
         std::exit(EXIT_FAILURE);
     }
 
-    runModelBuilder(inputArguments, fileInfo, fileReader);
+    runModelBuilder(inputArguments, fileInfo, fileReader, logger);
 
     return 0;
 
 }
 
-void runModelBuilder(const CopyModelInputArguments& inputArguments, const FileInfo& fileInfo, const FileReader& fileReader) {
+void runModelBuilder(const CopyModelInputArguments& inputArguments, const FileInfo& fileInfo,
+                     const FileReader& fileReader, Logger logger) {
 
     if (inputArguments.getModelBuilderType() == 1) {
 
-        GrowingWindowModelBuilder growingWindowModelBuilder = GrowingWindowModelBuilder(fileReader, fileInfo);
+        GrowingWindowModelBuilder growingWindowModelBuilder = GrowingWindowModelBuilder(fileReader, fileInfo, logger);
         growingWindowModelBuilder.buildModel(inputArguments.getAlpha(), inputArguments.getThreshold());
 
         SequentialModelSerializer sequentialModelSerializer = SequentialModelSerializer(inputArguments.getOutputModelPath());
@@ -69,7 +75,7 @@ void runModelBuilder(const CopyModelInputArguments& inputArguments, const FileIn
 
     } else if (inputArguments.getModelBuilderType() == 2) {
 
-        FixedWindowModelBuilder fixedWindowModelBuilder = FixedWindowModelBuilder(fileReader, fileInfo);
+        FixedWindowModelBuilder fixedWindowModelBuilder = FixedWindowModelBuilder(fileReader, fileInfo, logger);
         fixedWindowModelBuilder.buildModel(inputArguments.getAlpha(), inputArguments.getThreshold());
 
         ProbabilisticModelSerializer probabilisticModelSerializer = ProbabilisticModelSerializer(inputArguments.getOutputModelPath());

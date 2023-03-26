@@ -17,7 +17,7 @@ class GrowingWindowModelBuilder : public AbstractModelBuilder {
 
 public:
 
-    GrowingWindowModelBuilder(const FileReader &fileReader, const FileInfo &fileInfo);
+    GrowingWindowModelBuilder(const FileReader &fileReader, const FileInfo &fileInfo, const Logger &logger);
 
     ~GrowingWindowModelBuilder() override;
 

@@ -2,10 +2,6 @@
 #include <random>
 #include "GrowingWindowModelBuilder.h"
 
-GrowingWindowModelBuilder::GrowingWindowModelBuilder(const FileReader &fileReader, const FileInfo &fileInfo) : AbstractModelBuilder(fileReader, fileInfo) {}
-
-GrowingWindowModelBuilder::~GrowingWindowModelBuilder() = default;
-
 void GrowingWindowModelBuilder::buildModel(double alpha, double threshold) {
 
     fileReader.openFile();
@@ -16,7 +12,7 @@ void GrowingWindowModelBuilder::buildModel(double alpha, double threshold) {
         // Get Window sequence as string
         std::string sequenceAsString = convertCharArrayToString(fileReader.getWindowContent(), fileReader.getWindowSize());
 
-        // std::cout << "Reading Window " << sequenceAsString << " on position " << fileReader.getCurrentPosition() << std::endl;
+        logger.debug("Reading Window " + sequenceAsString + " on position " + std::to_string(fileReader.getCurrentPosition()));
 
         // We have seen this sequence in the past
         if (pastSequencesPositions.count(sequenceAsString) > 0 && pastSequencesPositions[sequenceAsString][0] < fileReader.getCurrentPosition()-1) {
@@ -46,7 +42,6 @@ void GrowingWindowModelBuilder::buildModel(double alpha, double threshold) {
             HitsMissesInfo hitsMissesInfo;
 
             int count = 0;
-            int consecutiveMisses = 0;
 
             // Expand window until we reach the end of the file of the probability reaches a certain threshold
             do {
@@ -58,9 +53,6 @@ void GrowingWindowModelBuilder::buildModel(double alpha, double threshold) {
                 // Calculate the probability P (a.k.a. probability of Hit)
                 probabilityOfCorrectPrediction = calculateHitProbability(hitsMissesInfo.getHits(),
                                                                          hitsMissesInfo.getMisses(), alpha);
-
-                // Stop the copy model if we have reach the threshold
-                // if (probabilityOfCorrectPrediction < threshold) break;
 
                 std::string lastWindowAsString = convertCharArrayToString(fileReader.getLastWindowContent(),
                                                                           fileReader.getWindowSize());
@@ -74,60 +66,41 @@ void GrowingWindowModelBuilder::buildModel(double alpha, double threshold) {
                 // Value to distribute for other characters
                 double complementaryProbability = 1-probabilityOfCorrectPrediction;
 
+                std::string currentSequence = convertCharVectorToString(*fileReader.getCurrentSequence());
+
                 // If it turns out the next character in the copy model to be equal to the next character in the
                 // sequence then we have a hit.
                 if (predictedChar == nextCharacterInSequence) {
 
                     hitsMissesInfo.incrementHits();
 
-                    std::vector<char> currentSequenceVector(fileReader.getCurrentSequence()->size());
-                    std::copy(fileReader.getCurrentSequence()->begin(), fileReader.getCurrentSequence()->end(), currentSequenceVector.begin());
-                    std::string currentSequence = convertCharVectorToString(currentSequenceVector);
-
-                    /*std::cout << std::endl;
-                    std::cout << "Hit on Character " << nextCharacterInSequence << std::endl;
-                    std::cout << "Past Sequence in " << pastSequencePosition + count << std::endl;
-                    std::cout << "Sequence is: " << currentSequence << ". Last window: " << lastWindowAsString << std::endl;
-                    std::cout << "Probability is " << probabilityOfCorrectPrediction << std::endl;
-                    std::cout << "Adding probability " << probabilityOfCorrectPrediction << std::endl;
-                    std::cout << std::endl;*/
-
-                    consecutiveMisses = 0;
+                    logger.debug("\n");
+                    logger.debug("Hit on Character " + std::string(1, nextCharacterInSequence));
+                    logger.debug("Current sequence is: " + currentSequence);
+                    logger.debug("Past pointer at " + std::to_string(pastSequencePosition+count));
+                    logger.debug("Probability: " + std::to_string(probabilityOfCorrectPrediction));
 
                     // The total information is the sum of the information of each character at that point taking into
                     // account the probability of the character being correct
                     totalAmountOfInformation += -std::log2(probabilityOfCorrectPrediction);
 
-                    // std::cout << "Hit" << std::endl;
-
                 } else { // Otherwise, next character in sequence != of character in copy model, we have a miss
 
                     hitsMissesInfo.incrementMisses();
 
-                    std::vector<char> currentSequenceVector(fileReader.getCurrentSequence()->size());
-                    std::copy(fileReader.getCurrentSequence()->begin(), fileReader.getCurrentSequence()->end(), currentSequenceVector.begin());
-                    std::string currentSequence = convertCharVectorToString(currentSequenceVector);
+                    double probabilityOfFail = getProbabilityDistributionForCharacter(nextCharacterInSequence,
+                                                                                      complementaryProbability);
 
-                    double prob = getProbabilityDistributionForCharacter(nextCharacterInSequence,
-                                                                         complementaryProbability);
-
-                    consecutiveMisses += 1;
-                    // std::cout << "Miss" << std::endl;
-
-                    /*std::cout << std::endl;
-                    std::cout << "Miss on Character " << nextCharacterInSequence << ". Expecting " << predictedChar << std::endl;
-                    std::cout << "Sequence is: " << currentSequence << ". Last window: " << lastWindowAsString << std::endl;
-                    std::cout << "Probability is " << probabilityOfCorrectPrediction << std::endl;
-                    std::cout << "Adding probability " << prob << std::endl;
-                    std::cout << "Past Sequence in " << pastSequencePosition + count << std::endl;
-
-                    std::cout << std::endl;
-                    std::cout << std::endl;*/
+                    logger.debug("\n");
+                    logger.debug("Miss on Character " + std::string(1, nextCharacterInSequence));
+                    logger.debug("  Was expecting instead an " + std::string(1, predictedChar));
+                    logger.debug("Current sequence is " + currentSequence);
+                    logger.debug("Past pointer at " + std::to_string(pastSequencePosition+count));
+                    logger.debug("Probability: " + std::to_string(probabilityOfFail));
 
                     // The total information is the sum of the information of each character at that point taking into
                     // account the probability of the character being correct
-                    totalAmountOfInformation += -std::log2(getProbabilityDistributionForCharacter(nextCharacterInSequence,
-                                                                                                  complementaryProbability));
+                    totalAmountOfInformation += -std::log2(probabilityOfFail);
 
                 }
 
@@ -164,6 +137,8 @@ void GrowingWindowModelBuilder::buildModel(double alpha, double threshold) {
                 // Read next character to shift next window
                 fileReader.nextCharacter();
 
+                logger.debug("Changed pointer!");
+
             }
 
         } else {
@@ -179,12 +154,15 @@ void GrowingWindowModelBuilder::buildModel(double alpha, double threshold) {
 
     }
 
-    // Cache is correct
-    // std::cout << "Cache: " << convertCharVectorToString(*fileReader.getCache()) << std::endl;
-
     fileReader.closeFile();
 
 }
+
+GrowingWindowModelBuilder::GrowingWindowModelBuilder(const FileReader &fileReader, const FileInfo &fileInfo,
+                                                     const Logger &logger) : AbstractModelBuilder(fileReader, fileInfo,
+                                                                                                  logger) {}
+
+GrowingWindowModelBuilder::~GrowingWindowModelBuilder() = default;
 
 double GrowingWindowModelBuilder::calculateInformationByCharacter() {
     return totalAmountOfInformation/fileInfo.getSize();
@@ -197,3 +175,4 @@ double GrowingWindowModelBuilder::calculateTotalInformation() {
 std::map<std::string, std::string> GrowingWindowModelBuilder::getModel() {
     return bestCopyForWindow;
 }
+

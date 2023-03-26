@@ -1,7 +1,7 @@
 #include "AbstractModelBuilder.h"
 
-AbstractModelBuilder::AbstractModelBuilder(FileReader fileReader, FileInfo fileInfo) : fileReader(std::move(
-        fileReader)), fileInfo(std::move(fileInfo)) {
+AbstractModelBuilder::AbstractModelBuilder(FileReader fileReader, FileInfo fileInfo, Logger logger) : fileReader(std::move(
+        fileReader)), fileInfo(std::move(fileInfo)), logger(logger) {
     this->symbolsDistribution = this->fileInfo.getSymbolsDistribution();
 }
 
@@ -12,6 +12,5 @@ int AbstractModelBuilder::getProgress() {
 double AbstractModelBuilder::getProbabilityDistributionForCharacter(char character, double complementaryProbability) {
     return complementaryProbability/(double) (fileInfo.getAlphabet().size()-1);
 }
-
 
 AbstractModelBuilder::~AbstractModelBuilder() = default;

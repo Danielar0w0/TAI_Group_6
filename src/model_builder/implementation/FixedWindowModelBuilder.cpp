@@ -156,8 +156,9 @@ double FixedWindowModelBuilder::calculateInformationByCharacter() {
 
 }
 
-FixedWindowModelBuilder::FixedWindowModelBuilder(const FileReader &fileReader, const FileInfo &fileInfo)
-        : AbstractModelBuilder(fileReader, fileInfo) {}
+FixedWindowModelBuilder::FixedWindowModelBuilder(const FileReader &fileReader, const FileInfo &fileInfo,
+                                                 const Logger &logger) : AbstractModelBuilder(fileReader, fileInfo,
+                                                                                              logger) {}
 
 FixedWindowModelBuilder::~FixedWindowModelBuilder() = default;
 

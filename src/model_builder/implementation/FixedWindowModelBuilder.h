@@ -29,7 +29,8 @@ class FixedWindowModelBuilder : public AbstractModelBuilder {
 
 public:
 
-    FixedWindowModelBuilder(const FileReader &fileReader, const FileInfo &fileInfo);
+    FixedWindowModelBuilder(const FileReader &fileReader, const FileInfo &fileInfo, const Logger &logger);
+
     ~FixedWindowModelBuilder() override;
 
 
