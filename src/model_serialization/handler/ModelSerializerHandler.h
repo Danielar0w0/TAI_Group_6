@@ -5,7 +5,7 @@
 
 #include "../utils/ModelType.h"
 #include "../abstract/AbstractModelSerializer.h"
-#include "../implementation/SequentialModelSerializer.h"
+#include "../implementation/PositionalModelSerializer.h"
 #include "../implementation/ProbabilisticModelSerializer.h"
 
 class ModelSerializerHandler {

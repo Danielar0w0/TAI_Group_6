@@ -2,7 +2,7 @@
 #define SRC_MODELTYPE_H
 
 enum ModelType : short {
-    SEQUENTIAL = 0,
+    POSITIONAL = 0,
     PROBABILISTIC = 1,
     UNKNOWN = 2
 };

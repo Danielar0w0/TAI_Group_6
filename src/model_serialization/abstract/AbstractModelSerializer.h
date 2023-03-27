@@ -9,7 +9,9 @@
 class AbstractModelSerializer {
 
     protected:
+
         std::string modelPath;
+        std::string inputFilePath;
         explicit AbstractModelSerializer(std::string modelPath);
 
 
@@ -21,7 +23,8 @@ class AbstractModelSerializer {
         virtual bool loadModel() = 0;
 
         std::string getModelPath();
-
+        std::string getInputFilePath();
+        void setInputFilePath(const std::string& inputPath);
 
 };
 

@@ -6,7 +6,7 @@
 #include "reader/FileReader.h"
 #include "model_builder/utils/HitsMissesInfo.h"
 #include "model_serialization/implementation/ProbabilisticModelSerializer.h"
-#include "model_serialization/implementation/SequentialModelSerializer.h"
+#include "model_serialization/implementation/PositionalModelSerializer.h"
 #include "model_builder/implementation/FixedWindowModelBuilder.h"
 #include "model_builder/implementation/GrowingWindowModelBuilder.h"
 
@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
 
     // Initialize logger
     Logger logger = Logger();
-    logger.setLevel(LoggingLevel::INFO);
+    logger.setLevel(inputArguments.getLoggingLevel());
 
     std::cout << "Alphabet: " << fileInfo.getSize() << std::endl;
 
@@ -61,31 +61,27 @@ int main(int argc, char *argv[]) {
 void runModelBuilder(const CopyModelInputArguments& inputArguments, const FileInfo& fileInfo,
                      const FileReader& fileReader, Logger logger) {
 
-    if (inputArguments.getModelBuilderType() == 1) {
 
-        GrowingWindowModelBuilder growingWindowModelBuilder = GrowingWindowModelBuilder(fileReader, fileInfo, logger);
-        growingWindowModelBuilder.buildModel(inputArguments.getAlpha(), inputArguments.getThreshold());
+    GrowingWindowModelBuilder growingWindowModelBuilder = GrowingWindowModelBuilder(fileReader, fileInfo, logger);
+    growingWindowModelBuilder.buildModel(inputArguments.getAlpha(), inputArguments.getThreshold());
 
-        SequentialModelSerializer sequentialModelSerializer = SequentialModelSerializer(inputArguments.getOutputModelPath());
-        sequentialModelSerializer.setModel(growingWindowModelBuilder.getModel());
-        sequentialModelSerializer.outputModel();
+    std::cout << "Information by Character: " << growingWindowModelBuilder.calculateInformationByCharacter() << std::endl;
+    std::cout << "Total Amount of Information: " << growingWindowModelBuilder.calculateTotalInformation() << std::endl;
 
-        std::cout << "Information by Character: " << growingWindowModelBuilder.calculateInformationByCharacter() << std::endl;
-        std::cout << "Total Amount of Information: " << growingWindowModelBuilder.calculateTotalInformation() << std::endl;
+    FixedWindowModelBuilder fixedWindowModelBuilder = FixedWindowModelBuilder(fileReader, fileInfo, logger);
+    fixedWindowModelBuilder.buildModel(inputArguments.getAlpha(), inputArguments.getThreshold());
 
-    } else if (inputArguments.getModelBuilderType() == 2) {
+    ProbabilisticModelSerializer probabilisticModelSerializer = ProbabilisticModelSerializer(inputArguments.getOutputModelPath());
 
-        FixedWindowModelBuilder fixedWindowModelBuilder = FixedWindowModelBuilder(fileReader, fileInfo, logger);
-        fixedWindowModelBuilder.buildModel(inputArguments.getAlpha(), inputArguments.getThreshold());
+    probabilisticModelSerializer.setInputFilePath(inputArguments.getInputFilePath());
+    probabilisticModelSerializer.setModel(fixedWindowModelBuilder.getProbabilisticModel());
+    probabilisticModelSerializer.outputModel();
 
-        ProbabilisticModelSerializer probabilisticModelSerializer = ProbabilisticModelSerializer(inputArguments.getOutputModelPath());
-        probabilisticModelSerializer.setModel(fixedWindowModelBuilder.getModel());
-        probabilisticModelSerializer.outputModel();
-
-        std::cout << "Information by Character: " << fixedWindowModelBuilder.calculateInformationByCharacter() << std::endl;
-        std::cout << "Total Amount of Information: " << fixedWindowModelBuilder.calculateTotalInformation() << std::endl;
-
-    }
+//    PositionalModelSerializer positionalModelSerializer = PositionalModelSerializer(inputArguments.getOutputModelPath());
+//
+//    positionalModelSerializer.setInputFilePath(inputArguments.getInputFilePath());
+//    positionalModelSerializer.setModel(fixedWindowModelBuilder.getPositionModel());
+//    positionalModelSerializer.outputModel();
 
 }
 

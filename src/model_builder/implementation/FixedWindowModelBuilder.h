@@ -14,18 +14,9 @@
 class FixedWindowModelBuilder : public AbstractModelBuilder {
 
     std::map<std::string, std::vector<int>> pastSequencesPositions;
-    std::map<std::string, int> sequenceCurrentPointer;
-    std::map<std::string, int> sequenceCurrentPointerIndex;
+    std::map<std::string, std::map<char, double>> probabilitiesForSequence;
 
-    std::map<std::string, std::pair<char, HitsMissesInfo>> hitsAndMissesForEachSequence;
 
-    // Temporary variables to calculate the average of probabilities for each sequence + symbol
-    std::map<std::string, std::map<char, double>> sequenceSymbolProbabilitiesSum;
-    std::map<std::string, int> sequenceSymbolProbabilitiesCount;
-
-    std::map<char, double> probabilitiesByCharacter;
-
-    int totalAmountOfPredictions = 0;
 
 public:
 
@@ -33,12 +24,10 @@ public:
 
     ~FixedWindowModelBuilder() override;
 
-
     void buildModel(double alpha, double threshold) override;
-    double calculateInformationByCharacter() override;
-    double calculateTotalInformation() override;
 
-    std::map<std::string, std::map<char, double>> getModel();
+    std::map<std::string, std::map<char, double>> getProbabilisticModel();
+    std::map<std::string, std::vector<int>> getPositionModel();
 
 };
 

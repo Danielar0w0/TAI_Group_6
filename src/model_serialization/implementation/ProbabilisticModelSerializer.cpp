@@ -31,6 +31,13 @@ bool ProbabilisticModelSerializer::outputModel() {
         return false;
     }
 
+    writeStatus = fprintf(target, "Original File:%s\n", this->inputFilePath.c_str());
+
+    if(writeStatus < 0) {
+        cerr << "Error writing to text file " << this->modelPath.c_str() << ": " << stderr << endl;
+        return false;
+    }
+
     // Iterate over map
     for (const auto& i: this->model) {
         string sequence = i.first;
@@ -65,6 +72,18 @@ bool ProbabilisticModelSerializer::loadModel() {
         int lineCount = 0;
 
         getline(file, line); // Ignore first line
+
+        getline(file, line); // Read second line - i.e., path for original file
+
+        size_t pos0 = line.find(':');
+
+        if(pos0 == std::string::npos) {
+            cerr << "Error parsing text file in line: " << lineCount << ": wrong model format." << endl;
+            return false;
+        }
+
+        string originalFilePath = line.substr(pos0 + 1, line.length() - 1);
+        this->inputFilePath = originalFilePath;
 
         while(getline(file, line)) { // Read file line by line
             // Parse obtained line

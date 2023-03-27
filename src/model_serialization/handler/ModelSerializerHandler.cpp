@@ -35,8 +35,8 @@ ModelType ModelSerializerHandler::getModelType(const std::string& modelPath) {
 
     std::cout << "Model Type: " << modelType << std::endl;
 
-    if (std::stoi(modelType) == ModelType::SEQUENTIAL) {
-        return ModelType::SEQUENTIAL;
+    if (std::stoi(modelType) == ModelType::POSITIONAL) {
+        return ModelType::POSITIONAL;
     } else if (std::stoi(modelType) == ModelType::PROBABILISTIC) {
         return ModelType::PROBABILISTIC;
     }

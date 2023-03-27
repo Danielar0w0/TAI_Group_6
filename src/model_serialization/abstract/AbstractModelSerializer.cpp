@@ -8,4 +8,12 @@ std::string AbstractModelSerializer::getModelPath() {
     return this->modelPath;
 }
 
+std::string AbstractModelSerializer::getInputFilePath() {
+    return this->inputFilePath;
+}
+
+void AbstractModelSerializer::setInputFilePath(const std::string& inputPath) {
+    this->inputFilePath = inputPath;
+}
+
 

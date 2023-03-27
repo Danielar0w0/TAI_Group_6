@@ -4,8 +4,8 @@
 
 std::string modelTypeToString(ModelType modelType) {
     switch (modelType) {
-        case SEQUENTIAL:
-            return "Sequential";
+        case POSITIONAL:
+            return "Positional";
         case PROBABILISTIC:
             return "Probabilistic";
         default:

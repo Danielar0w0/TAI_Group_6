@@ -95,6 +95,7 @@ void CopyModelInputArguments::parseArguments(int argc, char **argv) {
         std::string parsedInputFilePath;
         std::string parsedOutputModelFilePath;
         int parsedModelBuilderType = -1;
+        int parsedLoggingLevel = 1;
 
         // Note: argc - 1 because the last argument can't be a flag
         for (int i = 0; i < argc - 1; ++i) {
@@ -116,6 +117,9 @@ void CopyModelInputArguments::parseArguments(int argc, char **argv) {
             } else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--threshold") == 0) {
                 if (isNumber(argv[i + 1]))
                     parsedThreshold = atof(argv[i + 1]);
+            } else if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--logging") == 0) {
+                if (isNumber(argv[i + 1]))
+                    parsedLoggingLevel = atoi(argv[i + 1]);
             }
         }
 
@@ -145,9 +149,14 @@ void CopyModelInputArguments::parseArguments(int argc, char **argv) {
         this->inputFilePath = std::move(parsedInputFilePath);
         this->outputModelPath = std::move(parsedOutputModelFilePath);
         this->modelBuilderType = parsedModelBuilderType;
+        this->loggingLevel = parsedLoggingLevel;
 
     }
 
+}
+
+int CopyModelInputArguments::getLoggingLevel() const {
+    return this->loggingLevel;
 }
 
 CopyModelInputArguments::CopyModelInputArguments() = default;

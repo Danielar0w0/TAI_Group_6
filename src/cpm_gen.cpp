@@ -4,7 +4,8 @@
 #include "input/InputUtils.h"
 #include "model_serialization/handler/ModelSerializerHandler.h"
 #include "model_serialization/implementation/ProbabilisticModelSerializer.h"
-#include "model_serialization/implementation/SequentialModelSerializer.h"
+#include "model_serialization/implementation/PositionalModelSerializer.h"
+#include "reader/RandomAccessReader.h"
 
 char getNextCharacterUniform(const std::map<char, double>& map);
 char getNextCharacterCustom(const std::map<char, double>& charactersProbabilityDistributionMap);
@@ -12,7 +13,7 @@ char getNextCharacterBacktracking(const std::string& currentWindow, std::map<std
 void callProbabilisticGenerator(ProbabilisticModelSerializer copyModelSerializer,
                                 const GeneratorInputArguments& generatorInputArguments);
 
-void callSequentialGenerator(SequentialModelSerializer copyModelSerializer,
+void callSequentialGenerator(PositionalModelSerializer copyModelSerializer,
                              const GeneratorInputArguments& generatorInputArguments);
 
 
@@ -25,11 +26,11 @@ int main(int argc, char *argv[]) {
 
     ModelType modelType = ModelSerializerHandler::getModelType(generatorInputArguments.getModelPath());
 
-    if (modelType == ModelType::SEQUENTIAL) {
+    if (modelType == ModelType::POSITIONAL) {
 
-        cout << "[!] Sequential Model Detected!!!" << endl;
+        cout << "[!] Positional Model Detected!!!" << endl;
 
-        SequentialModelSerializer sequentialModelSerializer = SequentialModelSerializer(generatorInputArguments.getModelPath());
+        PositionalModelSerializer sequentialModelSerializer = PositionalModelSerializer(generatorInputArguments.getModelPath());
         sequentialModelSerializer.loadModel();
 
         callSequentialGenerator(sequentialModelSerializer, generatorInputArguments);
@@ -108,7 +109,7 @@ void callProbabilisticGenerator(ProbabilisticModelSerializer copyModelSerializer
 
 }
 
-void callSequentialGenerator(SequentialModelSerializer copyModelSerializer, const GeneratorInputArguments& generatorInputArguments) {
+void callSequentialGenerator(PositionalModelSerializer copyModelSerializer, const GeneratorInputArguments& generatorInputArguments) {
 
     std::string input;
 
@@ -119,9 +120,11 @@ void callSequentialGenerator(SequentialModelSerializer copyModelSerializer, cons
     cout << endl;
     cout << "When you are done, type 'exit'." << endl << endl;
 
-    std::map<std::string, std::string> model = copyModelSerializer.getModel();
+    std::map<std::string, std::vector<int>> model = copyModelSerializer.getModel();
+    std::vector<char> fileCache;
 
-    std::vector<char> generatedCharacters;
+    RandomAccessReader randomAccessReader = RandomAccessReader(copyModelSerializer.getInputFilePath());
+    randomAccessReader.openFile();
 
     do {
 
@@ -145,10 +148,6 @@ void callSequentialGenerator(SequentialModelSerializer copyModelSerializer, cons
 
         std::string completedOutput = currentWindow;
 
-        if (model[currentWindow].size() > 4) {
-            completedOutput += model[currentWindow].substr(3, model[currentWindow].size()-1);
-        }
-
         while (completedOutput.size() < generatorInputArguments.getAmountOfCharactersToGenerate()) {
 
             currentWindow = completedOutput.substr(completedOutput.size()-3, completedOutput.size());
@@ -156,9 +155,12 @@ void callSequentialGenerator(SequentialModelSerializer copyModelSerializer, cons
             if (model.count(currentWindow) <= 0)
                 break;
 
-            if (model[currentWindow].size() > 4) {
-                completedOutput += model[currentWindow].substr(3, model[currentWindow].size()-1);
-            }
+            std::random_device dev;
+            std::mt19937 rng(dev());
+            std::uniform_int_distribution<std::mt19937::result_type> dist6(1, model[currentWindow].size()-1);
+
+            unsigned int randomIndex = dist6(rng);
+            completedOutput += randomAccessReader.getCharAt(model[currentWindow][randomIndex]);
 
         }
 
@@ -166,6 +168,8 @@ void callSequentialGenerator(SequentialModelSerializer copyModelSerializer, cons
         cout << endl;
 
     } while (input != "exit");
+
+    randomAccessReader.closeFile();
 
 }
 

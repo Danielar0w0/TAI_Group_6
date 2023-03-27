@@ -14,6 +14,7 @@ class CopyModelInputArguments {
     std::string inputFilePath;
     std::string outputModelPath;
     int modelBuilderType{};
+    int loggingLevel;
 
     public:
 
@@ -26,6 +27,7 @@ class CopyModelInputArguments {
         [[nodiscard]] std::string getInputFilePath() const;
         [[nodiscard]] std::string getOutputModelPath() const;
         [[nodiscard]] int getModelBuilderType() const;
+        [[nodiscard]] int getLoggingLevel() const;
 
         void parseArguments(int argc, char *argv[]);
         // Don't add nodiscard - I may want to check the arguments and do nothing with the return value.
