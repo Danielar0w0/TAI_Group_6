@@ -10,7 +10,9 @@ void ModelGenerator::generateModel() {
                                                                 fileReader.getWindowSize());
 
         // If we have never seen this sequence, add it as key and a vector with the position
-        pastSequencesPositions[windowAsString].push_back(fileReader.getCurrentPosition());
+        if (std::find(pastSequencesPositions[windowAsString].begin(),
+                         pastSequencesPositions[windowAsString].end(),fileReader.getCurrentPosition()+1) == pastSequencesPositions[windowAsString].end())
+            pastSequencesPositions[windowAsString].push_back(fileReader.getCurrentPosition());
 
         // Which character is next?
         char futureCharacter = fileReader.getNextCharacterInSequence();

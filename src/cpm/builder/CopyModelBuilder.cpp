@@ -3,7 +3,11 @@
 
 void CopyModelBuilder::buildModel(double alpha, double threshold) {
 
+    FILE* exportInformation = fopen("information.txt", "w");
+
     fileReader.openFile();
+
+    int counter = 0;
 
     // Read a window
     while (fileReader.next()) {
@@ -83,6 +87,8 @@ void CopyModelBuilder::buildModel(double alpha, double threshold) {
                     // account the probability of the character being correct
                     totalAmountOfInformation += -std::log2(probabilityOfCorrectPrediction);
 
+                    fprintf(exportInformation, "%f;%i\n", -std::log2(probabilityOfCorrectPrediction), counter++);
+
                 } else { // Otherwise, next character in sequence != of character in copy model, we have a miss
 
                     hitsMissesInfo.incrementMisses();
@@ -99,6 +105,8 @@ void CopyModelBuilder::buildModel(double alpha, double threshold) {
                     // The total information is the sum of the information of each character at that point taking into
                     // account the probability of the character being correct
                     totalAmountOfInformation += -std::log2(probabilityOfFail);
+
+                    fprintf(exportInformation, "%f;%i\n", -std::log2(probabilityOfFail), counter++);
 
                 }
 
@@ -125,6 +133,8 @@ void CopyModelBuilder::buildModel(double alpha, double threshold) {
             // calculate the information and add it to the total amount of information
             totalAmountOfInformation += -std::log2(1.0/(int)fileInfo.getAlphabet().size());
 
+            fprintf(exportInformation, "%f;%i\n", -std::log2(1.0/(int)fileInfo.getAlphabet().size()), counter++);
+
             // If we have never seen this sequence, add it as key and a vector with the position
             pastSequencesPositions.insert(std::pair<std::string, std::vector<int>>(sequenceAsString, {fileReader.getCurrentPosition()}));
 
@@ -137,6 +147,8 @@ void CopyModelBuilder::buildModel(double alpha, double threshold) {
 
     std::printf("\n\n");
     std::fflush(stdout);
+
+    fclose(exportInformation);
 
     fileReader.closeFile();
 

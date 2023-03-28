@@ -54,11 +54,11 @@ bool PositionalModelSerializer::outputModel() {
 
         std::random_device dev;
         std::mt19937 rng(dev());
-        std::uniform_int_distribution<std::mt19937::result_type> dist6(1, std::min((int)positions.size(), positionsPerSequenceLimit)); // distribution in range [1, 6]
+        std::uniform_int_distribution<std::mt19937::result_type> dist6(1, std::min((int)positions.size(), positionsPerSequenceLimit));
 
-        for (int modelPositionForSequenceIdx = 0; modelPositionForSequenceIdx < std::min((int)positions.size(), positionsPerSequenceLimit); modelPositionForSequenceIdx++) {
+        for (int position : positions) {
 
-            writeStatus = fprintf(target, "%i,", positions[dist6(rng)]);
+            writeStatus = fprintf(target, "%i,", position);
 
             if (writeStatus < 0) {
                 std::cerr << "Error writing to text file " << this->modelPath.c_str() << ": " << stderr << std::endl;

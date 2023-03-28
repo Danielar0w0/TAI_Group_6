@@ -13,12 +13,12 @@ std::string PositionalGenerator::generateText(int generationSize, const std::str
     RandomAccessReader randomAccessReader = RandomAccessReader(positionalModelSerializer.getInputFilePath());
     randomAccessReader.openFile();
 
-    if (initialText.size() < 3) {
+    if (initialText.size() < getModelWindowSize()) {
         std::cout << "[!] Please enter a sequence with at least " << getModelWindowSize() << " characters." << std::endl;
         return "";
     }
 
-    std::string currentWindow = initialText.substr(initialText.size() - 3, initialText.size());
+    std::string currentWindow = initialText.substr(initialText.size() - getModelWindowSize(), initialText.size());
 
     if (model.count(currentWindow) <= 0) {
         std::cout << "[!] Unable to find data for '" << currentWindow << "' in the model." << std::endl;
@@ -30,7 +30,7 @@ std::string PositionalGenerator::generateText(int generationSize, const std::str
 
     while (completedOutput.size() < generationSize) {
 
-        currentWindow = completedOutput.substr(completedOutput.size() - getModelWindowSize(), completedOutput.size());
+        currentWindow = completedOutput.substr(completedOutput.size()-getModelWindowSize(), completedOutput.size());
 
         if (model.count(currentWindow) <= 0)
             break;
