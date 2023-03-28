@@ -16,7 +16,8 @@ class CopyModelInputArguments : public AbstractInputArguments {
     std::string outputModelPath{};
     int loggingLevel = 1;
     int serializerType{};
-    bool serializeForGenerator = false;
+    bool serializeForGenerator = true;
+    bool calculateInformation = true;
 
     public:
 
@@ -30,6 +31,7 @@ class CopyModelInputArguments : public AbstractInputArguments {
         [[nodiscard]] int getLoggingLevel() const;
         [[nodiscard]] int getSerializerType() const;
         [[nodiscard]] bool shouldSerializeForGenerator() const;
+        [[nodiscard]] bool shouldCalculateInformation() const;
 
         void parseArguments(int argc, char *argv[]) override;
 

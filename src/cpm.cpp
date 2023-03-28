@@ -1,6 +1,5 @@
 #include <cmath>
 
-#include "utils/printUtils.h"
 #include "input/implementation//CopyModelInputArguments.h"
 #include "reader/FileReader.h"
 #include "cpm/builder/CopyModelBuilder.h"
@@ -46,11 +45,14 @@ int main(int argc, char *argv[]) {
     // Get File Reader instance for second pass
     FileReader fileReader = getFileReaderInstance(inputArguments);
 
-    CopyModelBuilder* copyModelBuilder = runModelBuilder(inputArguments, fileInfo, fileReader, logger);
+    if (inputArguments.shouldCalculateInformation()) {
 
-    logCopyModelResults(copyModelBuilder, logger);
+        CopyModelBuilder* copyModelBuilder = runModelBuilder(inputArguments, fileInfo, fileReader, logger);
+        logCopyModelResults(copyModelBuilder, logger);
 
-    delete copyModelBuilder;
+        delete copyModelBuilder;
+
+    }
 
     if (inputArguments.shouldSerializeForGenerator()) {
 
