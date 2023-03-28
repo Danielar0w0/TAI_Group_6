@@ -14,15 +14,15 @@ bool CopyModelInputArguments::checkArguments() const {
         return false;
     }
 
+    if (this->k <= 0 || this->k > 100) {
+        std::cerr << "[!!!] K should be a value in the interval ]0, 100]." << std::endl;
+        return false;
+    }
+
     if (this->calculateInformation) {
 
         if (this->alpha <= 0 || this->alpha > 5) {
             std::cerr << "[!!!] Alpha should be a value in the interval ]0, 5]." << std::endl;
-            return false;
-        }
-
-        if (this->k <= 0 || this->k > 100) {
-            std::cerr << "[!!!] K should be a value in the interval ]0, 100]." << std::endl;
             return false;
         }
 

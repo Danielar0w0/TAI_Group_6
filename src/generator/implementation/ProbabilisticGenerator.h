@@ -8,6 +8,7 @@ class ProbabilisticGenerator : public AbstractGenerator {
 
     ProbabilisticModelSerializer probabilisticModelSerializer;
     bool useOptimization = false;
+    int optimizationAggressiveness = 1;
 
 public:
 
@@ -18,6 +19,7 @@ public:
     int getModelWindowSize() override;
 
     void setUseOptimization(bool useOptimization);
+    void setOptimizationAggressiveness(int optimizationAggressiveness);
 
 private:
 

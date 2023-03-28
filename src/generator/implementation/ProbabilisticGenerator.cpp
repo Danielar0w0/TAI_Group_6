@@ -23,6 +23,7 @@ void ProbabilisticGenerator::generateTextInteractively(int generationSize) {
 
         if (generatedText.empty()) continue;
 
+        std::cout << "[-] (" << input << ")";
         std::cout << generatedText << std::endl;
 
     }
@@ -44,6 +45,7 @@ void ProbabilisticGenerator::generateTextOnce(int generationSize) {
 
     if (generatedText.empty()) return;
 
+    std::cout << "[-] (" << input << ")";
     std::cout << generatedText << std::endl;
 
 }
@@ -65,17 +67,14 @@ std::string ProbabilisticGenerator::generateText(int generationSize, const std::
         return "";
     }
 
-    std::cout << "[-] ";
-    std::cout << "(" << initialText << ")";
-
-    std::string generatedText;
+    std::string generatedText = currentWindow;
 
     for (int i = 0; i < generationSize; ++i) {
 
         if (model.count(currentWindow) <= 0)
             break;
 
-        char nextChar = generateNextCharacter(currentWindow, useFuturePredictionAlgorithm);
+        char nextChar = generateNextCharacter(generatedText, useFuturePredictionAlgorithm);
 
         currentWindow += nextChar;
         generatedText += nextChar;
@@ -83,7 +82,7 @@ std::string ProbabilisticGenerator::generateText(int generationSize, const std::
 
     }
 
-    return generatedText;
+    return generatedText.substr(getModelWindowSize(), generatedText.length());
 
 }
 
@@ -99,18 +98,38 @@ char ProbabilisticGenerator::generateNextCharacter(const std::string& generatedT
         int triesCounter = 0;
         std::string nextWindow;
         char nextCharacterPrediction;
+        std::vector<char> notSafeCharacters;
 
         while (true) {
 
-            char randomPrediction = getCharacterUsingUniformDist(charactersProbabilityDistributionMap);
+            char randomPrediction;
+
+            if (notSafeCharacters.size() >= charactersProbabilityDistributionMap.size()/5) {
+
+                for (const auto& [futureCharacter, _] : charactersProbabilityDistributionMap) {
+                    if (std::find(notSafeCharacters.begin(), notSafeCharacters.end(), futureCharacter) == notSafeCharacters.end()) {
+                        randomPrediction = futureCharacter;
+                        break;
+                    }
+                }
+
+            } else {
+                randomPrediction = getCharacterUsingUniformDist(charactersProbabilityDistributionMap);
+            }
+
             currentWindow = currentWindow.substr(1, currentWindow.size()-1) + randomPrediction;
 
             // If the window + the character I generated exists in the model
             if (model.count(currentWindow) > 0) {
 
-                if (isCharacterSafeChoice(currentWindow, charactersProbabilityDistributionMap, 0, getModelWindowSize()-1)) {
+                if (isCharacterSafeChoice(currentWindow, charactersProbabilityDistributionMap, 0, this->optimizationAggressiveness)) {
                     nextCharacterPrediction = randomPrediction;
+                    notSafeCharacters.clear();
+                    std::cout << "Optimizing Output. Optimizing " << generatedText.size() << "th character." << "\r";
+                    std::fflush(stdout);
                     break;
+                } else {
+                    notSafeCharacters.push_back(randomPrediction);
                 }
 
                 continue;
@@ -160,8 +179,10 @@ bool ProbabilisticGenerator::isCharacterSafeChoice(const std::string& currentWin
     int totalCorrectMoves = 0;
     std::string tempWindow;
 
-    if (currentIteration >= maxIterations)
+    if (currentIteration >= maxIterations) {
+        logger.debug("Reached max iterations: " + std::to_string(maxIterations));
         return true;
+    }
 
     // Check if in the next move it will come to a point where I'm trapped
     for (const auto& [futureCharacter, _] : charactersProbabilityDistribution) {
@@ -173,6 +194,8 @@ bool ProbabilisticGenerator::isCharacterSafeChoice(const std::string& currentWin
         }
 
     }
+
+    logger.debug("Recursive Call: " + std::to_string(currentIteration));
 
     if (totalCorrectMoves >= 1)
         return isCharacterSafeChoice(tempWindow, charactersProbabilityDistribution, currentIteration + 1,maxIterations);
@@ -186,4 +209,8 @@ int ProbabilisticGenerator::getModelWindowSize() {
 
 void ProbabilisticGenerator::setUseOptimization(bool useOptimizationParam) {
     this->useOptimization = useOptimizationParam;
+}
+
+void ProbabilisticGenerator::setOptimizationAggressiveness(int optimizationAggressivenessParam) {
+    this->optimizationAggressiveness = optimizationAggressivenessParam;
 }

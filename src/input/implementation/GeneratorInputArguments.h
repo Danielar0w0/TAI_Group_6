@@ -10,6 +10,7 @@ class GeneratorInputArguments : public AbstractInputArguments {
     std::string modelPath;
     int amountOfCharactersToGenerate = 50;
     int loggingLevel = 1;
+    int optimizationAggressiveness = 1;
     bool interactive = false;
     bool useOptimization = false;
 
@@ -22,6 +23,7 @@ class GeneratorInputArguments : public AbstractInputArguments {
         [[nodiscard]] int getLoggingLevel() const;
         [[nodiscard]] int isInteractive() const;
         [[nodiscard]] bool shouldUseOptimization() const;
+        [[nodiscard]] int getOptimizationAggressiveness() const;
 
         void parseArguments(int argc, char *argv[]) override;
 

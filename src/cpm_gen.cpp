@@ -32,6 +32,7 @@ int main(int argc, char *argv[]) {
         sequentialModelSerializer.loadModel();
 
         PositionalGenerator positionalGenerator = PositionalGenerator(sequentialModelSerializer);
+        positionalGenerator.setLogger(logger);
         positionalGenerator.printHeader();
 
         logger.info("[!] Using Positional Model");
@@ -50,9 +51,12 @@ int main(int argc, char *argv[]) {
         probabilisticModelSerializer.loadModel();
 
         ProbabilisticGenerator probabilisticGenerator = ProbabilisticGenerator(probabilisticModelSerializer);
+        probabilisticGenerator.setLogger(logger);
         probabilisticGenerator.printHeader();
 
         logger.info("[!] Using Probabilistic Model");
+
+        probabilisticGenerator.setOptimizationAggressiveness(inputArguments.getOptimizationAggressiveness());
 
         if (inputArguments.shouldUseOptimization()) {
             logger.info("[!] Using Optimization");

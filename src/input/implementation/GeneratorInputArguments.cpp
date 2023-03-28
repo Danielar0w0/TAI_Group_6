@@ -21,6 +21,9 @@ void GeneratorInputArguments::printUsage() {
     std::cout << "-g \t Amount of characters to generate" << std::endl;
     std::cout << "-i \t Interactive mode" << std::endl;
     std::cout << "-o \t Use optimization" << std::endl;
+    std::cout << "-oA\t Optimization aggressiveness" << std::endl;
+    std::cout << "-l \t Logging level" << std::endl;
+    std::cout << "-h \t Print usage" << std::endl;
 }
 
 void GeneratorInputArguments::parseArguments(int argc, char **argv) {
@@ -54,6 +57,9 @@ void GeneratorInputArguments::parseArguments(int argc, char **argv) {
             } else if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--logging") == 0) {
                 if (isNumber(argv[i + 1]))
                     this->loggingLevel = atoi(argv[i + 1]);
+            } else if (strcmp(argv[i], "-oA") == 0 || strcmp(argv[i], "--optimizationAggressiveness") == 0) {
+                if (isNumber(argv[i + 1]))
+                    this->optimizationAggressiveness = atoi(argv[i + 1]);
             }
         }
 
@@ -74,6 +80,11 @@ bool GeneratorInputArguments::checkArguments() const {
         return false;
     }
 
+    if (this->optimizationAggressiveness < 1 || this->optimizationAggressiveness > 3) {
+        std::cerr << "The optimization aggressiveness must be between 1 and 3." << std::endl;
+        return false;
+    }
+
     return true;
 
 }
@@ -88,4 +99,8 @@ int GeneratorInputArguments::isInteractive() const {
 
 bool GeneratorInputArguments::shouldUseOptimization() const {
     return this->useOptimization;
+}
+
+int GeneratorInputArguments::getOptimizationAggressiveness() const {
+    return this->optimizationAggressiveness;
 }
