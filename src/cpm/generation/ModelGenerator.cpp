@@ -1,5 +1,7 @@
 #include "ModelGenerator.h"
 
+#include <random>
+
 void ModelGenerator::generateModel() {
 
     fileReader.openFile();
@@ -29,9 +31,33 @@ void ModelGenerator::generateModel() {
 
     // Calculate the probabilities
     for (auto &sequence : probabilitiesForSequence) {
+
         for (auto &character : sequence.second) {
             character.second /= (double) pastSequencesPositions[sequence.first].size();
+            character.second *= 0.9;
         }
+
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> dis(0, (int)fileInfo.getAlphabet().size()-1);
+
+        std::vector<char> alphabetVector;
+
+        // Print all characters in alphabetVector
+        for (auto &character : fileInfo.getAlphabet()) {
+            alphabetVector.push_back(character);
+        }
+
+        for (int i = 0; i < 5; ++i) {
+
+            char character = alphabetVector[dis(gen)];
+
+            if (sequence.second.count(character) == 0) {
+                sequence.second[character] = 0.1/5;
+            }
+
+        }
+
     }
 
     fileReader.closeFile();
