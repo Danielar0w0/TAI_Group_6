@@ -1,15 +1,14 @@
-#include <iostream>
 #include <cmath>
 
 #include "utils/printUtils.h"
 #include "input/classes/CopyModelInputArguments.h"
 #include "reader/FileReader.h"
-#include "model_serialization/implementation/ProbabilisticModelSerializer.h"
-#include "model_serialization/implementation/PositionalModelSerializer.h"
-#include "model_serialization/utils/ModelType.h"
 #include "cpm/builder/CopyModelBuilder.h"
 #include "logging/Logger.h"
 #include "cpm/generation/ModelGenerator.h"
+#include "serialization/utils/ModelType.h"
+#include "serialization/implementation/ProbabilisticModelSerializer.h"
+#include "serialization/implementation/PositionalModelSerializer.h"
 
 
 FileInfo getFileInfo(const CopyModelInputArguments& inputArguments);
@@ -18,6 +17,7 @@ FileReader getFileReaderInstance(const CopyModelInputArguments& inputArguments);
 void logCopyModelResults(CopyModelBuilder* copyModelBuilder, Logger logger);
 CopyModelBuilder* runModelBuilder(const CopyModelInputArguments& inputArguments, const FileInfo& fileInfo,
                      const FileReader& fileReader, Logger logger);
+
 ModelGenerator* generateModel(const FileInfo& fileInfo, const FileReader& fileReader, Logger logger);
 void serializeModel(ModelGenerator* modelGenerator, const std::string& modelPath, const std::string& inputFilePath,
                     int generatedModelType);
@@ -106,7 +106,6 @@ ModelGenerator* generateModel(const FileInfo& fileInfo, const FileReader& fileRe
     return modelGenerator;
 
 }
-
 
 void serializeModel(ModelGenerator* modelGenerator, const std::string& modelPath, const std::string& inputFilePath,
                     int generatedModelType) {
