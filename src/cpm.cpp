@@ -1,7 +1,7 @@
 #include <cmath>
 
 #include "utils/printUtils.h"
-#include "input/classes/CopyModelInputArguments.h"
+#include "input/implementation//CopyModelInputArguments.h"
 #include "reader/FileReader.h"
 #include "cpm/builder/CopyModelBuilder.h"
 #include "logging/Logger.h"

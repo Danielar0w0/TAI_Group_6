@@ -10,6 +10,7 @@ class AbstractGenerator : public LoggableEntity {
 public:
 
     virtual void generateTextInteractively(int generationSize) = 0;
+    virtual void generateTextOnce(int generationSize) = 0;
     virtual int getModelWindowSize() = 0;
     void printHeader();
 

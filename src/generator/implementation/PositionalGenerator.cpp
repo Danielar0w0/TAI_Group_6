@@ -7,14 +7,46 @@
 PositionalGenerator::PositionalGenerator(PositionalModelSerializer positionalModelSerializer)
         : positionalModelSerializer(std::move(positionalModelSerializer)) {}
 
-void PositionalGenerator::generateTextInteractively(int generationSize) {
 
-    std::map<std::string, std::vector<int>> model = positionalModelSerializer.getModel();
-    std::vector<char> fileCache;
+std::string PositionalGenerator::generateText(int generationSize, const std::string& initialText, const std::map<std::string, std::vector<int>>& model) {
 
     RandomAccessReader randomAccessReader = RandomAccessReader(positionalModelSerializer.getInputFilePath());
     randomAccessReader.openFile();
 
+    if (initialText.size() < 3) {
+        std::cout << "[!] Please enter a sequence with at least " << getModelWindowSize() << " characters." << std::endl;
+        return "";
+    }
+
+    std::string currentWindow = initialText.substr(initialText.size() - 3, initialText.size());
+
+    if (model.count(currentWindow) <= 0) {
+        std::cout << "[!] Unable to find data for '" << currentWindow << "' in the model." << std::endl;
+        std::cout << "[!] Please try again with a different sequence." << std::endl;
+        return "";
+    }
+
+    std::string completedOutput = currentWindow;
+
+    while (completedOutput.size() < generationSize) {
+
+        currentWindow = completedOutput.substr(completedOutput.size() - getModelWindowSize(), completedOutput.size());
+
+        if (model.count(currentWindow) <= 0)
+            break;
+
+        char nextChar = generateNextCharacter(currentWindow, randomAccessReader);
+        completedOutput += nextChar;
+
+    }
+
+    return completedOutput.substr(initialText.size(), completedOutput.size());
+
+}
+
+void PositionalGenerator::generateTextInteractively(int generationSize) {
+
+    std::map<std::string, std::vector<int>> model = positionalModelSerializer.getModel();
     std::string input = std::string("");
 
     while (true) {
@@ -24,39 +56,32 @@ void PositionalGenerator::generateTextInteractively(int generationSize) {
 
         if (input == "exit") break;
 
-        if (input.size() < 3) {
-            std::cout << "[!] Please enter a sequence with at least " << getModelWindowSize() << " characters." << std::endl;
-            continue;
-        }
+        std::string textGenerated = generateText(generationSize, input, model);
 
-        std::string currentWindow = input.substr(input.size() - 3, input.size());
-
-        if (model.count(currentWindow) <= 0) {
-            std::cout << "[!] Unable to find data for '" << input << "' in the model." << std::endl;
-            std::cout << "[!] Please try again with a different sequence." << std::endl;
-            continue;
-        }
+        if (textGenerated.empty()) continue;
 
         std::cout << "[-] (" << input << ")";
-
-        std::string completedOutput = currentWindow;
-
-        while (completedOutput.size() < generationSize) {
-
-            currentWindow = completedOutput.substr(completedOutput.size() - getModelWindowSize(), completedOutput.size());
-
-            if (model.count(currentWindow) <= 0)
-                break;
-
-            char nextChar = generateNextCharacter(currentWindow, randomAccessReader);
-            completedOutput += nextChar;
-
-        }
-
-        std::cout << completedOutput.substr(input.size(), completedOutput.size()) << std::endl;
-        std::cout << std::endl;
+        std::cout << textGenerated << std::endl;
 
     }
+
+}
+
+void PositionalGenerator::generateTextOnce(int generationSize) {
+
+    std::map<std::string, std::vector<int>> model = positionalModelSerializer.getModel();
+    std::string input = std::string("");
+
+    std::cout << "Enter a sequence: ";
+    std::getline(std::cin, input);
+
+    std::string textGenerated = generateText(generationSize, input, model);
+
+    if (textGenerated.empty()) return;
+
+    std::cout << "[-] (" << input << ")";
+    std::cout << textGenerated << std::endl;
+
 
 }
 

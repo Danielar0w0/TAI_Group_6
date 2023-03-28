@@ -10,7 +10,6 @@ ProbabilisticGenerator::ProbabilisticGenerator(ProbabilisticModelSerializer prob
 void ProbabilisticGenerator::generateTextInteractively(int generationSize) {
 
     std::string input;
-    std::string generatedText;
     std::map<std::string, std::map<char, double>> model = probabilisticModelSerializer.getModel();
 
     while (true) {
@@ -20,39 +19,71 @@ void ProbabilisticGenerator::generateTextInteractively(int generationSize) {
 
         if (input == "exit") break;
 
-        if (input.size() < getModelWindowSize()) {
-            std::cout << "[!] Please enter a sequence with at least " << getModelWindowSize() << " characters." << std::endl;
-            continue;
-        }
+        std::string generatedText = generateText(generationSize, input, model, this->useOptimization);
 
-        std::string currentWindow = input.substr(input.size()-getModelWindowSize(), input.size());
-
-        if (model.count(currentWindow) <= 0) {
-            std::cout << "[!] Unable to find data for '" << input << "' in the model." << std::endl;
-            std::cout << "[!] Please try again with a different sequence." << std::endl;
-            continue;
-        }
-
-        std::cout << "[-] ";
-        std::cout << "(" << input << ")";
-
-        for (int i = 0; i < generationSize; ++i) {
-
-            if (model.count(currentWindow) <= 0)
-                break;
-
-            char nextChar = generateNextCharacter(currentWindow, true);
-
-            currentWindow += nextChar;
-            generatedText += nextChar;
-            currentWindow = currentWindow.substr(1, currentWindow.length() - 1);
-
-        }
+        if (generatedText.empty()) continue;
 
         std::cout << generatedText << std::endl;
-        generatedText.clear();
 
     }
+
+}
+
+
+void ProbabilisticGenerator::generateTextOnce(int generationSize) {
+
+    std::string input;
+    std::map<std::string, std::map<char, double>> model = probabilisticModelSerializer.getModel();
+
+    std::cout << "Enter a sequence: ";
+    std::getline(std::cin, input);
+
+    if (input == "exit") return;
+
+    std::string generatedText = generateText(generationSize, input, model, this->useOptimization);
+
+    if (generatedText.empty()) return;
+
+    std::cout << generatedText << std::endl;
+
+}
+
+std::string ProbabilisticGenerator::generateText(int generationSize, const std::string &initialText,
+                                                 const std::map<std::string, std::map<char, double>> &model,
+                                                 bool useFuturePredictionAlgorithm) {
+
+    if (initialText.size() < getModelWindowSize()) {
+        std::cout << "[!] Please enter a sequence with at least " << getModelWindowSize() << " characters." << std::endl;
+        return "";
+    }
+
+    std::string currentWindow = initialText.substr(initialText.size()-getModelWindowSize(), initialText.size());
+
+    if (model.count(currentWindow) <= 0) {
+        std::cout << "[!] Unable to find data for '" << currentWindow << "' in the model." << std::endl;
+        std::cout << "[!] Please try again with a different sequence." << std::endl;
+        return "";
+    }
+
+    std::cout << "[-] ";
+    std::cout << "(" << initialText << ")";
+
+    std::string generatedText;
+
+    for (int i = 0; i < generationSize; ++i) {
+
+        if (model.count(currentWindow) <= 0)
+            break;
+
+        char nextChar = generateNextCharacter(currentWindow, useFuturePredictionAlgorithm);
+
+        currentWindow += nextChar;
+        generatedText += nextChar;
+        currentWindow = currentWindow.substr(1, currentWindow.length() - 1);
+
+    }
+
+    return generatedText;
 
 }
 
@@ -153,3 +184,6 @@ int ProbabilisticGenerator::getModelWindowSize() {
     return (int) probabilisticModelSerializer.getModel().begin()->first.size();
 }
 
+void ProbabilisticGenerator::setUseOptimization(bool useOptimizationParam) {
+    this->useOptimization = useOptimizationParam;
+}

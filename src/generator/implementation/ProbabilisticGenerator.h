@@ -7,14 +7,21 @@
 class ProbabilisticGenerator : public AbstractGenerator {
 
     ProbabilisticModelSerializer probabilisticModelSerializer;
+    bool useOptimization = false;
 
 public:
 
     explicit ProbabilisticGenerator(ProbabilisticModelSerializer probabilisticModelSerializer);
 
     void generateTextInteractively(int generationSize) override;
+    void generateTextOnce(int generationSize) override;
     int getModelWindowSize() override;
 
+    void setUseOptimization(bool useOptimization);
+
+private:
+
+    std::string generateText(int generationSize, const std::string& initialText, const std::map<std::string, std::map<char, double>>& model, bool useFuturePredictionAlgorithm);
     char generateNextCharacter(const std::string& currentWindow, bool useFuturePredictionAlgorithm);
     static char getCharacterUsingUniformDist(const std::map<char, double>& charactersProbabilityDistribution);
     bool isCharacterSafeChoice(const std::string& currentWindow,  const std::map<char, double>& charactersProbabilityDistribution,

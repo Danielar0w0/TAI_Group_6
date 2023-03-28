@@ -1,7 +1,6 @@
 #include <iostream>
 
-#include "input/classes/GeneratorInputArguments.h"
-#include "input/InputUtils.h"
+#include "input/implementation/GeneratorInputArguments.h"
 #include "serialization/handler/ModelSerializerHandler.h"
 #include "serialization/implementation/ProbabilisticModelSerializer.h"
 #include "serialization/implementation/PositionalModelSerializer.h"
@@ -11,39 +10,68 @@
 
 int main(int argc, char *argv[]) {
 
-    GeneratorInputArguments generatorInputArguments = getGeneratorInputArguments(argc, argv);
+    GeneratorInputArguments inputArguments = GeneratorInputArguments();
+    inputArguments.parseArguments(argc, argv);
 
-    cout << "Model File Path: " << generatorInputArguments.getModelPath() << endl;
-    cout << "Amount of Characters to Generate: " << generatorInputArguments.getAmountOfCharactersToGenerate() << endl;
+    Logger logger = Logger();
+    logger.setLevel(inputArguments.getLoggingLevel());
 
-    ModelType modelType = ModelSerializerHandler::getModelType(generatorInputArguments.getModelPath());
+    if (!inputArguments.checkArguments()) {
+        GeneratorInputArguments::printUsage();
+        return EXIT_FAILURE;
+    }
+
+    logger.info("Model File Path: " + inputArguments.getModelPath());
+    logger.info("Amount of Characters to Generate: " + std::to_string(inputArguments.getAmountOfCharactersToGenerate()));
+
+    ModelType modelType = ModelSerializerHandler::getModelType(inputArguments.getModelPath());
 
     if (modelType == ModelType::POSITIONAL) {
 
-        cout << "[!] Positional Model Detected!!!" << endl;
-
-        PositionalModelSerializer sequentialModelSerializer = PositionalModelSerializer(generatorInputArguments.getModelPath());
+        PositionalModelSerializer sequentialModelSerializer = PositionalModelSerializer(inputArguments.getModelPath());
         sequentialModelSerializer.loadModel();
 
         PositionalGenerator positionalGenerator = PositionalGenerator(sequentialModelSerializer);
-
         positionalGenerator.printHeader();
-        positionalGenerator.generateTextInteractively(generatorInputArguments.getAmountOfCharactersToGenerate());
+
+        logger.info("[!] Using Positional Model");
+
+        if (inputArguments.isInteractive()) {
+            logger.info("[!] Using Interactive Mode");
+            positionalGenerator.generateTextInteractively(inputArguments.getAmountOfCharactersToGenerate());
+        } else {
+            logger.info("[!] Using Non-Interactive Mode");
+            positionalGenerator.generateTextOnce(inputArguments.getAmountOfCharactersToGenerate());
+        }
 
     } else if (modelType == ModelType::PROBABILISTIC) {
 
-        cout << "Model Type: Probabilistic" << endl;
-
-        ProbabilisticModelSerializer probabilisticModelSerializer = ProbabilisticModelSerializer(generatorInputArguments.getModelPath());
+        ProbabilisticModelSerializer probabilisticModelSerializer = ProbabilisticModelSerializer(inputArguments.getModelPath());
         probabilisticModelSerializer.loadModel();
 
         ProbabilisticGenerator probabilisticGenerator = ProbabilisticGenerator(probabilisticModelSerializer);
-
         probabilisticGenerator.printHeader();
-        probabilisticGenerator.generateTextInteractively(generatorInputArguments.getAmountOfCharactersToGenerate());
+
+        logger.info("[!] Using Probabilistic Model");
+
+        if (inputArguments.shouldUseOptimization()) {
+            logger.info("[!] Using Optimization");
+            probabilisticGenerator.setUseOptimization(true);
+        } else {
+            logger.info("[!] Not Using Optimization");
+            probabilisticGenerator.setUseOptimization(false);
+        }
+
+        if (inputArguments.isInteractive()) {
+            logger.info("[!] Using Interactive Mode");
+            probabilisticGenerator.generateTextInteractively(inputArguments.getAmountOfCharactersToGenerate());
+        } else {
+            logger.info("[!] Using Non-Interactive Mode");
+            probabilisticGenerator.generateTextOnce(inputArguments.getAmountOfCharactersToGenerate());
+        }
 
     } else {
-        cout << "Model Type: Unknown" << endl;
+        std::cout << "Model Type: Unknown" << std::endl;
     }
 
     return 0;
