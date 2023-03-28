@@ -25,5 +25,9 @@ std::string convertCharVectorToString(std::vector<char> vector) {
     return s;
 }
 
+bool sort_by_value(const std::pair<char, double>& a, const std::pair<char, double>& b) {
+    return a.second > b.second;
+}
+
 
 
