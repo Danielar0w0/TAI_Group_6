@@ -195,9 +195,7 @@ bool ProbabilisticGenerator::isCharacterSafeChoice(const std::string& currentWin
 
     }
 
-    logger.debug("Recursive Call: " + std::to_string(currentIteration));
-
-    if (totalCorrectMoves >= 1)
+    if (totalCorrectMoves >= this->optimizationAggressiveness/100*charactersProbabilityDistribution.size())
         return isCharacterSafeChoice(tempWindow, charactersProbabilityDistribution, currentIteration + 1,maxIterations);
     return false;
 
