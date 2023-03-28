@@ -4,18 +4,24 @@
 #include "utils/printUtils.h"
 #include "input/classes/CopyModelInputArguments.h"
 #include "reader/FileReader.h"
-#include "model_builder/utils/HitsMissesInfo.h"
 #include "model_serialization/implementation/ProbabilisticModelSerializer.h"
 #include "model_serialization/implementation/PositionalModelSerializer.h"
-#include "model_builder/implementation/FixedWindowModelBuilder.h"
-#include "model_builder/implementation/GrowingWindowModelBuilder.h"
+#include "model_serialization/utils/ModelType.h"
+#include "cpm/builder/CopyModelBuilder.h"
+#include "logging/Logger.h"
+#include "cpm/generation/ModelGenerator.h"
 
 
 FileInfo getFileInfo(const CopyModelInputArguments& inputArguments);
 FileReader getFileReaderInstance(const CopyModelInputArguments& inputArguments);
-void runModelBuilder(const CopyModelInputArguments& inputArguments, const FileInfo& fileInfo,
+
+void logCopyModelResults(CopyModelBuilder* copyModelBuilder, Logger logger);
+CopyModelBuilder* runModelBuilder(const CopyModelInputArguments& inputArguments, const FileInfo& fileInfo,
                      const FileReader& fileReader, Logger logger);
-void printInformationForCharacters(const std::map<char, double>& informationForCharacters);
+ModelGenerator* generateModel(const FileInfo& fileInfo, const FileReader& fileReader, Logger logger);
+void serializeModel(ModelGenerator* modelGenerator, const std::string& modelPath, const std::string& inputFilePath,
+                    int generatedModelType);
+
 
 int main(int argc, char *argv[]) {
 
@@ -30,7 +36,6 @@ int main(int argc, char *argv[]) {
         std::exit(EXIT_FAILURE);
     }
 
-
     // First Pass: Get File Info. (Alphabet and size)
     FileInfo fileInfo = getFileInfo(inputArguments);
 
@@ -38,50 +43,91 @@ int main(int argc, char *argv[]) {
     Logger logger = Logger();
     logger.setLevel(inputArguments.getLoggingLevel());
 
-    std::cout << "Alphabet: " << fileInfo.getSize() << std::endl;
-
     // Get File Reader instance for second pass
     FileReader fileReader = getFileReaderInstance(inputArguments);
 
-    if (inputArguments.getModelBuilderType() == 1) {
-        std::cout << "Running Growing Window Model Builder..." << std::endl;
-    } else if (inputArguments.getModelBuilderType() == 2) {
-        std::cout << "Running Fixed Window Model Builder..." << std::endl;
-    } else {
-        std::cout << "Invalid Model Builder Type. Exiting..." << std::endl;
-        std::exit(EXIT_FAILURE);
-    }
+    CopyModelBuilder* copyModelBuilder = runModelBuilder(inputArguments, fileInfo, fileReader, logger);
 
-    runModelBuilder(inputArguments, fileInfo, fileReader, logger);
+    logCopyModelResults(copyModelBuilder, logger);
 
-    return 0;
+    delete copyModelBuilder;
+
+    ModelGenerator* modelGenerator = generateModel(fileInfo, fileReader, logger);
+
+    serializeModel(modelGenerator, inputArguments.getOutputModelPath(),
+                   inputArguments.getInputFilePath(),inputArguments.getSerializerType());
+
+    return EXIT_SUCCESS;
 
 }
 
-void runModelBuilder(const CopyModelInputArguments& inputArguments, const FileInfo& fileInfo,
+CopyModelBuilder* runModelBuilder(const CopyModelInputArguments& inputArguments, const FileInfo& fileInfo,
                      const FileReader& fileReader, Logger logger) {
 
+    auto* copyModelBuilder = new CopyModelBuilder(fileReader, fileInfo);
+    copyModelBuilder->setLogger(logger);
 
-    GrowingWindowModelBuilder growingWindowModelBuilder = GrowingWindowModelBuilder(fileReader, fileInfo, logger);
-    growingWindowModelBuilder.buildModel(inputArguments.getAlpha(), inputArguments.getThreshold());
+    copyModelBuilder->buildModel(inputArguments.getAlpha(), inputArguments.getThreshold());
 
-    std::cout << "Information by Character: " << growingWindowModelBuilder.calculateInformationByCharacter() << std::endl;
-    std::cout << "Total Amount of Information: " << growingWindowModelBuilder.calculateTotalInformation() << std::endl;
+    return copyModelBuilder;
 
-    FixedWindowModelBuilder fixedWindowModelBuilder = FixedWindowModelBuilder(fileReader, fileInfo, logger);
-    fixedWindowModelBuilder.buildModel(inputArguments.getAlpha(), inputArguments.getThreshold());
+}
 
-    ProbabilisticModelSerializer probabilisticModelSerializer = ProbabilisticModelSerializer(inputArguments.getOutputModelPath());
+void logCopyModelResults(CopyModelBuilder* copyModelBuilder, Logger logger) {
 
-    probabilisticModelSerializer.setInputFilePath(inputArguments.getInputFilePath());
-    probabilisticModelSerializer.setModel(fixedWindowModelBuilder.getProbabilisticModel());
-    probabilisticModelSerializer.outputModel();
+    logger.info("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
+    logger.info("Copy Model Results");
+    logger.info("");
+    logger.info("Analyzed File: " + copyModelBuilder->getFileInfo().getFilePath());
+    logger.info("File Size (Characters): " + std::to_string(copyModelBuilder->getFileInfo().getSize()));
 
-//    PositionalModelSerializer positionalModelSerializer = PositionalModelSerializer(inputArguments.getOutputModelPath());
-//
-//    positionalModelSerializer.setInputFilePath(inputArguments.getInputFilePath());
-//    positionalModelSerializer.setModel(fixedWindowModelBuilder.getPositionModel());
-//    positionalModelSerializer.outputModel();
+    std::string alphabetStr;
+    for (char characterInAlphabet : copyModelBuilder->getFileInfo().getAlphabet()) {
+        alphabetStr.append(std::string(1, characterInAlphabet));
+        alphabetStr.append(",");
+    }
+
+    logger.info("Alphabet: " + alphabetStr);
+    logger.info("");
+    logger.info("Total Amount of Information: " + std::to_string(copyModelBuilder->calculateTotalInformation()));
+    logger.info("Information p/ character: " + std::to_string(copyModelBuilder->calculateInformationByCharacter()));
+    logger.info("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
+    logger.info("\n");
+
+}
+
+ModelGenerator* generateModel(const FileInfo& fileInfo, const FileReader& fileReader, Logger logger) {
+
+    auto* modelGenerator = new ModelGenerator(fileReader, fileInfo);
+    modelGenerator->setLogger(logger);
+
+    modelGenerator->generateModel();
+
+    return modelGenerator;
+
+}
+
+
+void serializeModel(ModelGenerator* modelGenerator, const std::string& modelPath, const std::string& inputFilePath,
+                    int generatedModelType) {
+
+    if (generatedModelType == ModelType::PROBABILISTIC) {
+
+        ProbabilisticModelSerializer probabilisticModelSerializer = ProbabilisticModelSerializer(modelPath);
+        probabilisticModelSerializer.setInputFilePath(inputFilePath);
+        probabilisticModelSerializer.setModel(modelGenerator->getProbabilisticModel());
+
+        probabilisticModelSerializer.outputModel();
+
+    } else if (generatedModelType == ModelType::POSITIONAL) {
+
+        PositionalModelSerializer positionalModelSerializer = PositionalModelSerializer(modelPath);
+        positionalModelSerializer.setInputFilePath(inputFilePath);
+        positionalModelSerializer.setModel(modelGenerator->getPositionModel());
+
+        positionalModelSerializer.outputModel();
+
+    }
 
 }
 

@@ -1,5 +1,5 @@
-#ifndef SRC_FIXEDWINDOWMODELBUILDER_H
-#define SRC_FIXEDWINDOWMODELBUILDER_H
+#ifndef SRC_MODELGENERATOR_H
+#define SRC_MODELGENERATOR_H
 
 #include <map>
 #include <utility>
@@ -7,11 +7,12 @@
 #include <iostream>
 
 #include "../../reader/FileReader.h"
-#include "../utils/HitsMissesInfo.h"
+#include "../support/HitsMissesInfo.h"
 #include "../../utils/generalUtils.h"
-#include "../abstract/AbstractModelBuilder.h"
+#include "../../utils/LoggableEntity.h"
+#include "../../utils/InputProcessorEntity.h"
 
-class FixedWindowModelBuilder : public AbstractModelBuilder {
+class ModelGenerator : public LoggableEntity, public InputProcessorEntity {
 
     std::map<std::string, std::vector<int>> pastSequencesPositions;
     std::map<std::string, std::map<char, double>> probabilitiesForSequence;
@@ -20,11 +21,10 @@ class FixedWindowModelBuilder : public AbstractModelBuilder {
 
 public:
 
-    FixedWindowModelBuilder(const FileReader &fileReader, const FileInfo &fileInfo, const Logger &logger);
+    ModelGenerator(const FileReader &fileReader, const FileInfo &fileInfo);
+    ~ModelGenerator() override;
 
-    ~FixedWindowModelBuilder() override;
-
-    void buildModel(double alpha, double threshold) override;
+    void generateModel();
 
     std::map<std::string, std::map<char, double>> getProbabilisticModel();
     std::map<std::string, std::vector<int>> getPositionModel();

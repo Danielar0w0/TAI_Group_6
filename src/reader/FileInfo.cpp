@@ -2,10 +2,11 @@
 
 #include <utility>
 
-FileInfo::FileInfo(std::set<char> alphabet, std::map<char, int> symbolsCount, int size) {
+FileInfo::FileInfo(const std::string& filePath, std::set<char> alphabet, std::map<char, int> symbolsCount, int size) {
     this->alphabet = std::move(alphabet);
     this->symbolsCount = std::move(symbolsCount);
     this->size = size;
+    this->filePath = filePath;
 }
 
 std::set<char> FileInfo::getAlphabet() {
@@ -29,5 +30,9 @@ std::map<char, double> FileInfo::getSymbolsDistribution() {
 
 int FileInfo::getSize() const {
     return this->size;
+}
+
+std::string FileInfo::getFilePath() const {
+    return this->filePath;
 }
 

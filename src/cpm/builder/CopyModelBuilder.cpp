@@ -1,7 +1,7 @@
 #include <random>
-#include "GrowingWindowModelBuilder.h"
+#include "CopyModelBuilder.h"
 
-void GrowingWindowModelBuilder::buildModel(double alpha, double threshold) {
+void CopyModelBuilder::buildModel(double alpha, double threshold) {
 
     fileReader.openFile();
 
@@ -87,8 +87,7 @@ void GrowingWindowModelBuilder::buildModel(double alpha, double threshold) {
 
                     hitsMissesInfo.incrementMisses();
 
-                    double probabilityOfFail = getProbabilityDistributionForCharacter(nextCharacterInSequence,
-                                                                                      complementaryProbability);
+                    double probabilityOfFail = complementaryProbability/(int)(fileInfo.getAlphabet().size()-1);
 
                     logger.debug("\n");
                     logger.debug("Miss on Character " + std::string(1, nextCharacterInSequence));
@@ -131,30 +130,28 @@ void GrowingWindowModelBuilder::buildModel(double alpha, double threshold) {
 
         }
 
-        std::printf("Progress (Growing Window Model): %d%%\r", getProgress());
+        std::printf("Building Copy Model... %d%%\r", getProgress());
         std::fflush(stdout);
 
     }
+
+    std::printf("\n\n");
+    std::fflush(stdout);
 
     fileReader.closeFile();
 
 }
 
-GrowingWindowModelBuilder::GrowingWindowModelBuilder(const FileReader &fileReader, const FileInfo &fileInfo,
-                                                     const Logger &logger) : AbstractModelBuilder(fileReader, fileInfo,
-                                                                                                  logger) {}
+CopyModelBuilder::~CopyModelBuilder() = default;
 
-GrowingWindowModelBuilder::~GrowingWindowModelBuilder() = default;
-
-double GrowingWindowModelBuilder::calculateInformationByCharacter() {
+double CopyModelBuilder::calculateInformationByCharacter() {
     return totalAmountOfInformation/fileInfo.getSize();
 }
 
-double GrowingWindowModelBuilder::calculateTotalInformation() {
+double CopyModelBuilder::calculateTotalInformation() const {
     return totalAmountOfInformation;
 }
 
-std::map<std::string, std::string> GrowingWindowModelBuilder::getModel() {
-    return bestCopyForWindow;
-}
+CopyModelBuilder::CopyModelBuilder(const FileReader &fileReader, const FileInfo &fileInfo) : InputProcessorEntity(
+        fileReader, fileInfo) {}
 

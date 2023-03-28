@@ -137,7 +137,7 @@ FileInfo FileReader::getFileInfo() {
         ++fileSize;
     }
 
-    return FileInfo(alphabet, symbolsCount, fileSize);
+    return FileInfo(this->filePath, alphabet, symbolsCount, fileSize);
 }
 
 int FileReader::getWindowSize() const {

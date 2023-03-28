@@ -11,12 +11,6 @@
 
 using namespace std;
 
-CopyModelInputArguments getCopyModelInputArguments(int argc, char *argv[]) {
-
-
-
-}
-
 GeneratorInputArguments getGeneratorInputArguments(int argc, char *argv[]) {
 
     cout << "You have entered " << argc - 1 << " arguments." << endl;

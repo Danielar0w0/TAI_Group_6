@@ -1,6 +1,6 @@
-#include "FixedWindowModelBuilder.h"
+#include "ModelGenerator.h"
 
-void FixedWindowModelBuilder::buildModel(double alpha, double threshold) {
+void ModelGenerator::generateModel() {
 
     fileReader.openFile();
 
@@ -17,7 +17,7 @@ void FixedWindowModelBuilder::buildModel(double alpha, double threshold) {
 
         probabilitiesForSequence[windowAsString][futureCharacter] += 1;
 
-        std::printf("Progress (Fixed Window Model): %d%%\r", getProgress());
+        std::printf("Model Generator Progress: %d%%\r", getProgress());
         std::fflush(stdout);
 
     }
@@ -33,18 +33,18 @@ void FixedWindowModelBuilder::buildModel(double alpha, double threshold) {
 
 }
 
-std::map<std::string, std::map<char, double>> FixedWindowModelBuilder::getProbabilisticModel() {
+std::map<std::string, std::map<char, double>> ModelGenerator::getProbabilisticModel() {
     return probabilitiesForSequence;
 }
 
-std::map<std::string, std::vector<int>> FixedWindowModelBuilder::getPositionModel() {
+std::map<std::string, std::vector<int>> ModelGenerator::getPositionModel() {
     return pastSequencesPositions;
 }
 
-FixedWindowModelBuilder::FixedWindowModelBuilder(const FileReader &fileReader, const FileInfo &fileInfo,
-                                                 const Logger &logger) : AbstractModelBuilder(fileReader, fileInfo,
-                                                                                              logger) {}
+ModelGenerator::ModelGenerator(const FileReader &fileReader, const FileInfo &fileInfo)
+        : InputProcessorEntity(
+        fileReader, fileInfo) {}
 
-FixedWindowModelBuilder::~FixedWindowModelBuilder() = default;
+ModelGenerator::~ModelGenerator() = default;
 
 
