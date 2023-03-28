@@ -22,7 +22,7 @@ public:
 
 private:
 
-    std::string generateText(int generationSize, const std::string& initialText, const std::map<std::string, std::vector<int>>& model);
+    std::string generateText(int generationSize, const std::string& initialText, const std::map<std::string, std::vector<int>>& model, bool realTime);
 
 };
 

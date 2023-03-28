@@ -56,16 +56,6 @@ int main(int argc, char *argv[]) {
 
         logger.info("[!] Using Probabilistic Model");
 
-        probabilisticGenerator.setOptimizationAggressiveness(inputArguments.getOptimizationAggressiveness());
-
-        if (inputArguments.shouldUseOptimization()) {
-            logger.info("[!] Using Optimization");
-            probabilisticGenerator.setUseOptimization(true);
-        } else {
-            logger.info("[!] Not Using Optimization");
-            probabilisticGenerator.setUseOptimization(false);
-        }
-
         if (inputArguments.isInteractive()) {
             logger.info("[!] Using Interactive Mode");
             probabilisticGenerator.generateTextInteractively(inputArguments.getAmountOfCharactersToGenerate());

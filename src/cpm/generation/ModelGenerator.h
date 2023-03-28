@@ -17,8 +17,6 @@ class ModelGenerator : public LoggableEntity, public InputProcessorEntity {
     std::map<std::string, std::vector<int>> pastSequencesPositions;
     std::map<std::string, std::map<char, double>> probabilitiesForSequence;
 
-
-
 public:
 
     ModelGenerator(const FileReader &fileReader, const FileInfo &fileInfo);

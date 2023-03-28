@@ -163,5 +163,3 @@ FileInfo getFileInfo(const CopyModelInputArguments& inputArguments) {
 FileReader getFileReaderInstance(const CopyModelInputArguments& inputArguments) {
     return FileReader(inputArguments.getInputFilePath(), inputArguments.getK());
 }
-
-
