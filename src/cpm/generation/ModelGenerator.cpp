@@ -22,6 +22,9 @@ void ModelGenerator::generateModel() {
 
     }
 
+    std::printf("\n");
+    std::fflush(stdout);
+
     // Calculate the probabilities
     for (auto &sequence : probabilitiesForSequence) {
         for (auto &character : sequence.second) {

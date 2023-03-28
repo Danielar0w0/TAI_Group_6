@@ -35,7 +35,8 @@ class CopyModelInputArguments {
 
         static void printUsage();
 
-    int getSerializerType() const;
+        [[nodiscard]] int getSerializerType() const;
+
 };
 
 

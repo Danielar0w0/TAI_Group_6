@@ -2,22 +2,6 @@
 
 CopyModelInputArguments::CopyModelInputArguments() = default;
 
-double CopyModelInputArguments::getAlpha() const {
-    return this->alpha;
-}
-
-int CopyModelInputArguments::getK() const {
-    return this->k;
-}
-
-double CopyModelInputArguments::getThreshold() const {
-    return this->threshold;
-}
-
-std::string CopyModelInputArguments::getInputFilePath() const {
-    return this->inputFilePath;
-}
-
 bool CopyModelInputArguments::checkArguments() const {
 
     if (this->alpha <= 0 || this->alpha > 5) {
@@ -41,8 +25,8 @@ bool CopyModelInputArguments::checkArguments() const {
     }
 
     if (this->serializeForGenerator) {
-        if (this->serializerType != 1 && this->serializerType != 2) {
-            std::cerr << "[!!!] The serializer type should be 1 or 2." << std::endl;
+        if (this->serializerType != 0 && this->serializerType != 1) {
+            std::cerr << "[!!!] The serializer type should be 0 or 1." << std::endl;
             return false;
         }
         if (this->outputModelPath.empty()) {
@@ -161,6 +145,22 @@ int CopyModelInputArguments::getSerializerType() const {
 
 int CopyModelInputArguments::getLoggingLevel() const {
     return this->loggingLevel;
+}
+
+double CopyModelInputArguments::getAlpha() const {
+    return this->alpha;
+}
+
+int CopyModelInputArguments::getK() const {
+    return this->k;
+}
+
+double CopyModelInputArguments::getThreshold() const {
+    return this->threshold;
+}
+
+std::string CopyModelInputArguments::getInputFilePath() const {
+    return this->inputFilePath;
 }
 
 bool CopyModelInputArguments::shouldSerializeForGenerator() const {

@@ -20,7 +20,7 @@ CopyModelBuilder* runModelBuilder(const CopyModelInputArguments& inputArguments,
 
 ModelGenerator* generateModel(const FileInfo& fileInfo, const FileReader& fileReader, Logger logger);
 void serializeModel(ModelGenerator* modelGenerator, const std::string& modelPath, const std::string& inputFilePath,
-                    int generatedModelType);
+                    int generatedModelType, Logger logger);
 
 
 int main(int argc, char *argv[]) {
@@ -52,10 +52,21 @@ int main(int argc, char *argv[]) {
 
     delete copyModelBuilder;
 
-    ModelGenerator* modelGenerator = generateModel(fileInfo, fileReader, logger);
+    if (inputArguments.shouldSerializeForGenerator()) {
 
-    serializeModel(modelGenerator, inputArguments.getOutputModelPath(),
-                   inputArguments.getInputFilePath(),inputArguments.getSerializerType());
+        logger.info("[!] Generating a model to be used in Generator...");
+
+        ModelGenerator* modelGenerator = generateModel(fileInfo, fileReader, logger);
+
+        serializeModel(modelGenerator, inputArguments.getOutputModelPath(),
+                       inputArguments.getInputFilePath(),inputArguments.getSerializerType(),
+                       logger);
+
+        delete modelGenerator;
+
+        logger.info("[!] Model Serialized to: " + inputArguments.getOutputModelPath());
+
+    }
 
     return EXIT_SUCCESS;
 
@@ -108,9 +119,11 @@ ModelGenerator* generateModel(const FileInfo& fileInfo, const FileReader& fileRe
 }
 
 void serializeModel(ModelGenerator* modelGenerator, const std::string& modelPath, const std::string& inputFilePath,
-                    int generatedModelType) {
+                    int generatedModelType, Logger logger) {
 
     if (generatedModelType == ModelType::PROBABILISTIC) {
+
+        logger.info("[!] Serializing PROBABILISTIC model!");
 
         ProbabilisticModelSerializer probabilisticModelSerializer = ProbabilisticModelSerializer(modelPath);
         probabilisticModelSerializer.setInputFilePath(inputFilePath);
@@ -120,12 +133,16 @@ void serializeModel(ModelGenerator* modelGenerator, const std::string& modelPath
 
     } else if (generatedModelType == ModelType::POSITIONAL) {
 
+        logger.info("[!] Serializing POSITIONAL model!");
+
         PositionalModelSerializer positionalModelSerializer = PositionalModelSerializer(modelPath);
         positionalModelSerializer.setInputFilePath(inputFilePath);
         positionalModelSerializer.setModel(modelGenerator->getPositionModel());
 
         positionalModelSerializer.outputModel();
 
+    } else {
+        logger.error("[!] Invalid model type! Please check your input arguments.");
     }
 
 }
