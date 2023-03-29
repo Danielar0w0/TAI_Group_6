@@ -45,6 +45,8 @@ int main(int argc, char *argv[]) {
     // Get File Reader instance for second pass
     FileReader fileReader = getFileReaderInstance(inputArguments);
 
+    std::chrono::steady_clock::time_point modelBuildingStart = std::chrono::steady_clock::now();
+
     if (inputArguments.shouldCalculateInformation()) {
 
         CopyModelBuilder* copyModelBuilder = runModelBuilder(inputArguments, fileInfo, fileReader, logger);
@@ -53,6 +55,12 @@ int main(int argc, char *argv[]) {
         delete copyModelBuilder;
 
     }
+
+    std::chrono::steady_clock::time_point modelBuildingEnd = std::chrono::steady_clock::now();
+
+    logger.info("Model Building Time: " + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(modelBuildingEnd - modelBuildingStart).count()) + "ms");
+
+    std::chrono::steady_clock::time_point modelSerializeStart = std::chrono::steady_clock::now();
 
     if (inputArguments.shouldSerializeForGenerator()) {
 
@@ -69,6 +77,10 @@ int main(int argc, char *argv[]) {
         logger.info("[!] Model Serialized to: " + inputArguments.getOutputModelPath());
 
     }
+
+    std::chrono::steady_clock::time_point modelSerializeEnd = std::chrono::steady_clock::now();
+
+    logger.info("Model Serialization Time: " + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(modelSerializeEnd - modelSerializeStart).count()) + "ms");
 
     return EXIT_SUCCESS;
 
