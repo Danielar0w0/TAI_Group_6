@@ -22,6 +22,9 @@ Run Generator:
 ./bin/cpm_gen -m model.txt -g 500
 ```
 
+**A list of all the possible arguments for the Copy Model and Generator can be obtained using the `-h` argument. A table with all possible arguments as well as their possible values and descriptions is also available in the Report.**
+
+
 For the Generator, we must wait for the following message before typing anything. This message indicates that it has
 finished loading the Copy Model.
 
