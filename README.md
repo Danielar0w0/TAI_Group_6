@@ -8,7 +8,7 @@ project. In order to run the script and compile the program, you need CMake with
 ```
 
 After running this script, the binaries for the Copy Model and the Generator should be available inside the /bin folder.
-These binaries have the names `cpm` and `gen` respectively.
+These binaries have the names `cpm` and `cpm_gen` respectively.
 
 Run Copy Model:
 
