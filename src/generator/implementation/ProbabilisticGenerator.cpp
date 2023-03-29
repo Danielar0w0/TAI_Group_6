@@ -1,6 +1,7 @@
 #include <iostream>
 #include <utility>
 #include <random>
+#include <chrono>
 #include "ProbabilisticGenerator.h"
 
 ProbabilisticGenerator::ProbabilisticGenerator(ProbabilisticModelSerializer probabilisticModelSerializer)
