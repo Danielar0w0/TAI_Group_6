@@ -18,7 +18,9 @@ private:
 public:
 
     Logger();
+
     void setLevel(int level);
+    int getLevel() const;
 
     void debug(const std::string& message) const;
     void info(const std::string& message) const;

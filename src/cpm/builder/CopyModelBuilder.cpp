@@ -69,7 +69,12 @@ void CopyModelBuilder::buildModel(double alpha, double threshold) {
                 // Value to distribute for other characters
                 double complementaryProbability = 1-probabilityOfCorrectPrediction;
 
-                std::string currentSequence = convertCharVectorToString(*fileReader.getCurrentSequence());
+                std::string currentSequence;
+
+                if (logger.getLevel() >= LoggingLevel::DEBUG) {
+                    currentSequence = convertCharArrayToString(fileReader.getCurrentSequence()->data(),
+                                                               (int)fileReader.getCurrentSequence()->size());
+                }
 
                 // If it turns out the next character in the copy model to be equal to the next character in the
                 // sequence then we have a hit.
@@ -110,6 +115,9 @@ void CopyModelBuilder::buildModel(double alpha, double threshold) {
 
                 }
 
+                std::printf("Building Copy Model... %d%%\r", getProgress());
+                std::fflush(stdout);
+
             } while (probabilityOfCorrectPrediction >= threshold && fileReader.nextCharacter());
 
             // When we leave the loop we are stopping the copy model!
@@ -139,9 +147,6 @@ void CopyModelBuilder::buildModel(double alpha, double threshold) {
             pastSequencesPositions.insert(std::pair<std::string, std::vector<int>>(sequenceAsString, {fileReader.getCurrentPosition()}));
 
         }
-
-        std::printf("Building Copy Model... %d%%\r", getProgress());
-        std::fflush(stdout);
 
     }
 
